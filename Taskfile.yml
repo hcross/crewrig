@@ -1,0 +1,16 @@
+version: '3'
+
+vars:
+  GEMINI_HOME: "{{.HOME}}/.gemini"
+  REPO_DIR: "{{.PWD}}"
+
+tasks:
+  default:
+    cmd: task --list
+
+  setup-gemini-interactive:
+    desc: Interactive setup with team/expertise/level selection
+    preconditions:
+      - sh: command -v fzf >/dev/null 2>&1
+        msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
+    cmd: bash {{.REPO_DIR}}/scripts/setup-gemini-interactive.sh

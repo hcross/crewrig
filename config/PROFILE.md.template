@@ -1,0 +1,52 @@
+# Personal Profile
+
+## Identity
+
+- **Full Name:** ${USER_FULL_NAME}
+- **Email:** ${USER_EMAIL}
+- **Team:** ${USER_TEAM}
+- **Role:** ${USER_ROLE}
+- **Department:** ${USER_DEPARTMENT}
+- **Location:** ${USER_OFFICE_LOCATION}
+- **Preferred Language:** ${USER_LANGUAGE}
+
+## Tooling Preferences
+
+*Describe the tools and workflows you rely on daily.*
+
+- **Editor & Plugins:** (e.g., VS Code with ESLint, IntelliJ with Copilot)
+- **Terminal Setup:** (e.g., Zsh with Oh My Zsh, Warp, tmux)
+- **Communication:** (e.g., Slack for quick exchanges, email for formal threads)
+- **Work Rhythm:** (e.g., deep focus mornings, review afternoons)
+
+## Active Projects
+
+*What are you currently working on and what is your contribution?*
+
+1. **Project Name**
+   - **Responsibility:** (e.g., Lead Developer, Contributor)
+   - **Objective:** Brief summary of your focus area.
+
+2. **Project Name**
+   - **Responsibility:** ...
+   - **Objective:** ...
+
+## Growth Plan
+
+*Where do you want to be in six months?*
+
+- **Primary Focus:** (e.g., mastering distributed systems, learning Rust)
+- **Concrete Goals:** (e.g., obtain AWS certification, ship feature X)
+
+## Working Philosophy
+
+*How do you approach collaboration and decision-making?*
+
+- **Core Values:** (e.g., "ship early, iterate fast", "tests before code")
+- **Collaboration Preferences:** (e.g., "I prefer written RFCs before coding",
+  "quick pairing sessions over long reviews")
+- **Notes:** Any other context that helps the agent work effectively with you.
+
+---
+
+**Last Updated:** YYYY-MM-DD
