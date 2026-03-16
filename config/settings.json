@@ -29,6 +29,10 @@
   "mcpServers": {
     "github": {
       "httpUrl": "https://api.githubcopilot.com/mcp/"
+    },
+    "basic-memory": {
+      "command": "uvx",
+      "args": ["basic-memory", "mcp"]
     }
   }
 }
