@@ -64,6 +64,13 @@ tasks:
     desc: "Package a single extension (task package-extension EXT=hello-world)"
     cmd: bash {{.REPO_DIR}}/scripts/package-extension.sh
 
+  create-extension:
+    desc: "Scaffold a new extension from skeleton (task create-extension NAME=my-ext)"
+    preconditions:
+      - sh: command -v fzf >/dev/null 2>&1
+        msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
+    cmd: bash {{.REPO_DIR}}/scripts/create-extension.sh
+
   lint-markdown:
     desc: Check all Markdown files for lint compliance
     preconditions:
