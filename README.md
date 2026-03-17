@@ -144,6 +144,7 @@ scripts/
 Taskfile.yml                      # Task runner configuration
 AGENTS.md                         # Agent working rules for this project
 CLAUDE.md -> AGENTS.md            # Symlink for Claude Code compatibility
+CONTRIBUTING.md                   # Contribution guide
 ```
 
 ## MCP Servers
@@ -158,5 +159,6 @@ The `settings.json` configures two MCP servers:
 ## Contributing
 
 All contributions go through feature branches merged into `main` via Pull
-Request. See `AGENTS.md` for commit conventions (Gitmoji), PR format, and
+Request. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide and
+[`AGENTS.md`](AGENTS.md) for commit conventions (Gitmoji), PR format, and
 logbook issue requirements.
