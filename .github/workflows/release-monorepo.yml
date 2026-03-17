@@ -2,8 +2,7 @@ name: Analyze & Release (Monorepo)
 
 on:
   push:
-    # CI HACK: testing semantic-release on feat/ci-cd — remove before merge
-    branches: [main, feat/ci-cd]
+    branches: [main]
     tags-ignore:
       - "**"
 
