@@ -134,7 +134,7 @@ See `extensions/hello-world/` for a complete working example and
 
 ## Repository Structure
 
-```
+```text
 extensions/
 └── hello-world/           # Example extension (MCP server + command + skill)
 

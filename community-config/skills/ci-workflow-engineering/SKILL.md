@@ -16,6 +16,7 @@ project structure.
 ### 1. Assess and Plan
 
 Before touching any pipeline file, map the current situation:
+
 - Identify the failing job or the desired new workflow.
 - List hypotheses as a numbered table (H1, H2, ...) with status
   (untested / confirmed / rejected).
@@ -50,6 +51,7 @@ Exhaustive branch lists are fragile and hard to maintain.
 ### 4. Harden and Clean Up
 
 Once the pipeline is green and stable:
+
 - Remove all temporary trigger overrides, debug logs, and dry-run tags.
 - Replace any hardcoded values with CI variables
   (e.g., `$CI_PROJECT_URL`, `$GITHUB_REPOSITORY`).
@@ -63,6 +65,7 @@ Once the pipeline is green and stable:
 
 Every significant experiment must be logged as a comment in the linked
 issue:
+
 - What was tried and what the hypothesis was.
 - Outcome (green / red) with a link to the job or run.
 - Any traps or counter-intuitive behaviors discovered.

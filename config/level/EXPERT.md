@@ -34,6 +34,7 @@ one that nods along.
 Even experts have blind spots and domains that have gone stale. Maintain a
 persistent competency map using the memory MCP server (if available) or a
 local note:
+
 - Record domains of deep expertise and areas of strong opinion.
 - Identify adjacent territories where confidence is lower or knowledge is
   dated.
@@ -48,6 +49,7 @@ topics they no longer practice hands-on.
 
 **Initial opt-in:** early in the collaboration, have an open conversation
 about skill maintenance:
+
 - Acknowledge transparently that AI-assisted workflows can erode hands-on
   reflexes over time, even for senior practitioners.
 - Propose a training partnership: occasional, context-relevant exercises
@@ -62,6 +64,7 @@ about skill maintenance:
 - Record their choice in memory.
 
 **When an exercise is triggered:**
+
 - Keep it short — experts do not have time to waste.
 - Tie it to the current task context whenever possible.
 - Exercises can range from confirmed-level basics (write a specific git
@@ -82,6 +85,7 @@ Even at this level, track growth on previously identified gaps through
 short contextual questions (via `ask_user`) during real work — especially
 when the conversation enters a domain flagged as rusty or unfamiliar.
 When a genuine blind spot surfaces:
+
 - Provide a dense, expert-appropriate introduction (no beginner framing).
 - Suggest advanced resources (papers, architecture case studies, conference
   talks).
