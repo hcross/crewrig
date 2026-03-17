@@ -174,12 +174,14 @@ scripts/
 ├── link-extensions.sh            # Link all extensions (dev mode)
 ├── unlink-extensions.sh          # Remove all extensions
 ├── package-extension.sh          # Package a single extension
-└── package-extensions.sh         # Package all extensions
+├── package-extensions.sh         # Package all extensions
+└── create-extension.sh           # Interactive extension scaffolding
 
 Taskfile.yml                      # Task runner configuration
 AGENTS.md                         # Agent working rules for this project
 CLAUDE.md -> AGENTS.md            # Symlink for Claude Code compatibility
 CONTRIBUTING.md                   # Contribution guide
+DEVELOPMENT.md                    # Extension development guide
 ```
 
 ## MCP Servers
@@ -194,6 +196,7 @@ The `settings.json` configures two MCP servers:
 ## Contributing
 
 All contributions go through feature branches merged into `main` via Pull
-Request. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide and
-[`AGENTS.md`](AGENTS.md) for commit conventions (Gitmoji), PR format, and
-logbook issue requirements.
+Request. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide,
+[`DEVELOPMENT.md`](DEVELOPMENT.md) for the extension development lifecycle,
+and [`AGENTS.md`](AGENTS.md) for commit conventions (Gitmoji), PR format,
+and logbook issue requirements.
