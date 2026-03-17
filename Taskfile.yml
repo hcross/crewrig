@@ -14,3 +14,23 @@ tasks:
       - sh: command -v fzf >/dev/null 2>&1
         msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
     cmd: bash {{.REPO_DIR}}/scripts/setup-gemini-interactive.sh
+
+  install-workspace:
+    desc: Install all community-config components (copy mode)
+    cmd: bash {{.REPO_DIR}}/scripts/install-workspace.sh install
+
+  link-workspace:
+    desc: Link all community-config components (symlink mode, for development)
+    cmd: bash {{.REPO_DIR}}/scripts/install-workspace.sh link
+
+  install-component:
+    desc: "Install a single component (task install-component TYPE=skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-workspace-component.sh install {{.TYPE}} {{.NAME}}
+
+  link-component:
+    desc: "Link a single component (task link-component TYPE=skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-workspace-component.sh link {{.TYPE}} {{.NAME}}
+
+  unlink-component:
+    desc: "Remove a component from ~/.gemini (task unlink-component TYPE=skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/unlink-component.sh {{.TYPE}} {{.NAME}}
