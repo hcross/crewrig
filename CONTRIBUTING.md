@@ -6,6 +6,7 @@ to the repository.
 ## Philosophy: The Community Sandbox
 
 The `community-config/` directory serves as a **collaborative sandbox**:
+
 - Share lightweight components (commands, skills, hooks) quickly.
 - Let colleagues experiment with your improvements before they stabilize.
 - Once a component grows in complexity or requires executable code, migrate

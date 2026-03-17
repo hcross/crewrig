@@ -29,6 +29,7 @@ embedded in the flow:
 
 Maintain a persistent map of the user's skill progression using the memory
 MCP server (if available) or a local note:
+
 - Record confirmed strengths (topics where answers were accurate and
   confident).
 - Record identified gaps (topics where hesitation or misconceptions appeared).
@@ -39,6 +40,7 @@ MCP server (if available) or a local note:
 
 Periodically (not every session, but regularly enough to track growth),
 conduct a short structured evaluation:
+
 - **Duration:** a few interactions, under 5 minutes total.
 - **Before starting:** explain the purpose transparently — e.g., "I'd like to
   take a couple of minutes to check how you feel about some topics we've

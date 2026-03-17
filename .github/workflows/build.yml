@@ -1,0 +1,41 @@
+name: Build & Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags-ignore:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build all extensions
+        run: npm run build --workspaces --if-present
+
+  lint-markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli
+
+      - name: Lint Markdown files
+        run: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton

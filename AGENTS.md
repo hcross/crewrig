@@ -20,6 +20,7 @@ All commits must follow the [Gitmoji](https://gitmoji.dev/) convention.
 Format: `<emoji> <Short description>`
 
 Examples:
+
 - `🎉 Initial commit`
 - `✨ Add user authentication module`
 - `🐛 Fix null pointer in config loader`
@@ -63,6 +64,7 @@ Be explicit about what was added, modified, or removed and why.>
 Every PR **must** be linked to a **logbook issue** on GitHub.
 
 A logbook issue is a detailed journal entry that traces:
+
 - Every obstacle encountered and the resolution or avoidance strategy applied
 - Every challenge faced during implementation
 - Every success and breakthrough

@@ -6,7 +6,7 @@ your own extensions.
 
 ## Structure
 
-```
+```text
 hello-world/
 ├── gemini-extension.json   # Extension manifest
 ├── package.json            # npm package with MCP SDK dependency

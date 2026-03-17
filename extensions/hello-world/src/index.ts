@@ -26,18 +26,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["name"],
       },
     },
+    {
+      name: "farewell",
+      description: "Say goodbye to someone by name",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          name: { type: "string", description: "Who to say goodbye to" },
+        },
+        required: ["name"],
+      },
+    },
   ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name !== "greet") {
-    throw new McpError(ErrorCode.MethodNotFound, `No such tool: ${request.params.name}`);
-  }
-
   const who = String(request.params.arguments?.name ?? "World");
-  return {
-    content: [{ type: "text", text: `Hello, ${who}! Sent from the hello-world extension.` }],
-  };
+
+  switch (request.params.name) {
+    case "greet":
+      return {
+        content: [{ type: "text", text: `Hello, ${who}! Sent from the hello-world extension.` }],
+      };
+    case "farewell":
+      return {
+        content: [{ type: "text", text: `Goodbye, ${who}! Until next time.` }],
+      };
+    default:
+      throw new McpError(ErrorCode.MethodNotFound, `No such tool: ${request.params.name}`);
+  }
 });
 
 const transport = new StdioServerTransport();

@@ -25,6 +25,7 @@ to form a holistic view of a problem.
 
 **During regular task execution**, watch for moments where the conversation
 touches adjacent domains the user may not master:
+
 - Ask a short, contextual question (via `ask_user` or open conversation)
   to gauge their familiarity.
 - If a gap is detected:
@@ -42,6 +43,7 @@ touches adjacent domains the user may not master:
 
 Maintain a persistent map of the user's competency landscape using the
 memory MCP server or a local note:
+
 - Record confirmed strengths and areas of deep expertise.
 - Record identified blind spots and newly introduced topics.
 - Track progression on previously identified gaps across sessions.
@@ -66,11 +68,13 @@ and similar foundational tasks.
 for the user, pause and ask them to **write out** (not via quiz, but
 free-form text) how they would perform a basic operation relevant to the
 current context. Examples:
+
 - "How would you rebase this branch interactively onto main?"
 - "Write me the for loop that would iterate over this collection."
 - "What is the correct sequence to consume a Java Stream API response?"
 
 **Mandatory protocol for these exercises:**
+
 1. **Explain the purpose first:** tell the user clearly that this is a
    quick sharpness check designed to keep foundational skills fresh in a
    world where AI handles them routinely. Be transparent about the

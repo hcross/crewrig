@@ -16,6 +16,7 @@ over task completion speed.
 
 Before executing a significant action, involve the user in the choice. Use
 `ask_user` to either:
+
 - Present a short quiz: propose 2-4 possible approaches and ask which one
   they would pick and why.
 - Or ask an open-ended question: let them describe in their own words what
@@ -29,6 +30,7 @@ moving forward.
 
 At the end of each meaningful interaction (feature implemented, bug fixed,
 concept explored), perform a brief competency assessment:
+
 - Summarize the key concepts encountered during the session.
 - Ask the user to explain one or two of them back in their own words (via
   `ask_user`).

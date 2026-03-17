@@ -63,3 +63,17 @@ tasks:
   package-extension:
     desc: "Package a single extension (task package-extension EXT=hello-world)"
     cmd: bash {{.REPO_DIR}}/scripts/package-extension.sh
+
+  lint-markdown:
+    desc: Check all Markdown files for lint compliance
+    preconditions:
+      - sh: command -v markdownlint >/dev/null 2>&1
+        msg: "markdownlint-cli is required. Install with: npm install -g markdownlint-cli"
+    cmd: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton
+
+  fix-markdown:
+    desc: Auto-fix Markdown formatting issues
+    preconditions:
+      - sh: command -v markdownlint >/dev/null 2>&1
+        msg: "markdownlint-cli is required. Install with: npm install -g markdownlint-cli"
+    cmd: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton --fix
