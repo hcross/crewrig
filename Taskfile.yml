@@ -34,3 +34,32 @@ tasks:
   unlink-component:
     desc: "Remove a component from ~/.gemini (task unlink-component TYPE=skills NAME=ci-workflow-engineering)"
     cmd: bash {{.REPO_DIR}}/scripts/unlink-component.sh {{.TYPE}} {{.NAME}}
+
+  install-deps:
+    desc: Install npm dependencies for all extensions
+    cmd: npm install
+
+  install-extensions:
+    desc: Install all extensions (copy mode)
+    cmd: bash {{.REPO_DIR}}/scripts/install-extension.sh install
+
+  install-extension:
+    desc: "Install a single extension (task install-extension EXT=hello-world)"
+    cmd: bash {{.REPO_DIR}}/scripts/install-extension.sh install {{.EXT}}
+
+  link-extensions:
+    desc: Link all extensions (symlink mode, for development)
+    cmd: bash {{.REPO_DIR}}/scripts/link-extensions.sh
+
+  unlink-extensions:
+    desc: Remove all installed extensions
+    cmd: bash {{.REPO_DIR}}/scripts/unlink-extensions.sh
+
+  package:
+    desc: Package all extensions to dist/
+    deps: [install-deps]
+    cmd: bash {{.REPO_DIR}}/scripts/package-extensions.sh
+
+  package-extension:
+    desc: "Package a single extension (task package-extension EXT=hello-world)"
+    cmd: bash {{.REPO_DIR}}/scripts/package-extension.sh

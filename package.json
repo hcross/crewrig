@@ -1,0 +1,12 @@
+{
+  "name": "gemini-configuration",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "extensions/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  }
+}

@@ -1,0 +1,15 @@
+# Hello World Extension
+
+Context file loaded when this extension is active.
+
+## Available Capabilities
+
+- **`greet` tool**: produces a personalized greeting via MCP.
+- **`/hello` command**: shortcut for a quick greeting.
+- **Greeter skill**: guided introduction workflow.
+
+## Reference Value
+
+Use this extension as a template for building new ones. It demonstrates
+the standard directory layout, manifest configuration, TypeScript MCP
+server, command definition, and skill authoring.
