@@ -5,6 +5,7 @@ Context file loaded when this extension is active.
 ## Available Capabilities
 
 - **`greet` tool**: produces a personalized greeting via MCP.
+- **`farewell` tool**: says goodbye to someone by name.
 - **`/hello` command**: shortcut for a quick greeting.
 - **Greeter skill**: guided introduction workflow.
 
