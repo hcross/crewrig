@@ -28,6 +28,35 @@ The script will:
 3. Replace every `SKELETON_NAME` placeholder with your extension name.
 4. Merge JSON fragments (MCP server, theme) into the manifest.
 
+### Skeleton Structure
+
+The `extension-skeleton/` directory contains the template source:
+
+```text
+extension-skeleton/
+├── .geminiignore                          # Prevents Gemini from loading templates
+├── base/                                  # Always copied
+│   ├── gemini-extension.json              # Manifest (name, version, context)
+│   ├── package.json                       # npm package with MCP SDK dependency
+│   ├── tsconfig.json                      # TypeScript ES2022 / Node16
+│   ├── GEMINI.md                          # Agent context placeholder
+│   ├── README.md                          # Documentation placeholder
+│   └── .gitignore                         # node_modules, dist, .env
+├── mcp-server/                            # MCP server component
+│   ├── src/index.ts                       # Stdio MCP server with sample tool
+│   └── mcp-server.json.fragment           # Merged into manifest on creation
+├── command/commands/sample.toml           # Sample slash command
+├── skill/skills/sample-skill/SKILL.md     # Sample agent skill
+├── agent/agents/sample-agent/PROMPT.md    # Sample sub-agent prompt
+├── hook/hooks/                            # Lifecycle hook
+│   ├── hooks.json                         # Hook event configuration
+│   └── logger.sh                          # Sample BeforeTool hook script
+└── theme/theme.json.fragment              # Merged into manifest on creation
+```
+
+Every occurrence of `SKELETON_NAME` in these files is replaced with your
+extension name during scaffolding.
+
 ### After Scaffolding
 
 ```bash
