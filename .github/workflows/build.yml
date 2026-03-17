@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # CI HACK: temporarily include feat/ci-cd for testing — remove before merge
+    branches: [main, feat/ci-cd]
     tags-ignore:
       - "**"
 
