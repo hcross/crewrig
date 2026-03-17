@@ -25,15 +25,15 @@ for dir in extensions/*/; do
     echo "Packaging $EXT_NAME..."
     mkdir -p "$ROOT_DIR/dist"
     TARBALL=$(cd "$dir" && npm pack --pack-destination "$ROOT_DIR/dist" 2>/dev/null)
-    TARBALL_PATH="../../dist/$TARBALL"
-    echo "Packaged: $TARBALL"
+    TARBALL_ABS="$ROOT_DIR/dist/$TARBALL"
+    echo "Packaged: $TARBALL_ABS"
 
-    # Architecture (single-job):
-    #   semantic-release-gitmoji → analyze commits (replaces commit-analyzer
-    #   AND release-notes-generator)
-    #   semantic-release-monorepo → scope commits to this extension's dir
+    # Single-job architecture:
+    #   semantic-release-gitmoji → analyze commits (replaces both
+    #     commit-analyzer and release-notes-generator)
+    #   semantic-release-monorepo → scope commits to this extension dir
     #   @semantic-release/changelog → write CHANGELOG.md
-    #   @semantic-release/github → create GitHub Release with .tgz asset
+    #   @semantic-release/github → create GitHub Release + upload .tgz
     #   @semantic-release/git → commit CHANGELOG + package.json back
     cat <<EOF > "${dir}.releaserc.json"
 {
@@ -51,7 +51,7 @@ for dir in extensions/*/; do
     "@semantic-release/changelog",
     ["@semantic-release/github", {
       "assets": [
-        {"path": "$TARBALL_PATH", "label": "${EXT_NAME} (tgz)"}
+        {"path": "$TARBALL_ABS", "label": "${EXT_NAME} (tgz)"}
       ]
     }],
     ["@semantic-release/git", {
@@ -64,7 +64,8 @@ EOF
 
     cd "$dir"
 
-    if ! npx semantic-release $SR_ARGS --branches "$CURRENT_BRANCH"; then
+    echo "Running semantic-release for $EXT_NAME..."
+    if ! npx semantic-release $SR_ARGS --branches "$CURRENT_BRANCH" 2>&1; then
       echo "Error: semantic-release failed for $EXT_NAME"
       ERRORS=1
     fi
@@ -73,6 +74,9 @@ EOF
     cd "$ROOT_DIR"
   fi
 done
+
+# Cleanup dist
+rm -rf "$ROOT_DIR/dist"
 
 echo ""
 if [ $ERRORS -ne 0 ]; then
