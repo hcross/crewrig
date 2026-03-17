@@ -1,0 +1,58 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - "*-v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Extract extension name and version from tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          EXT=$(echo "$TAG" | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
+          VERSION=$(echo "$TAG" | sed -E 's/^.*-v//')
+          echo "ext=$EXT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Verify extension exists
+        run: |
+          if [ ! -d "extensions/${{ steps.meta.outputs.ext }}" ]; then
+            echo "Error: extension '${{ steps.meta.outputs.ext }}' not found."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Package extension
+        run: |
+          mkdir -p dist
+          cd "extensions/${{ steps.meta.outputs.ext }}"
+          npm pack --pack-destination ../../dist
+
+      - name: Rename package for release
+        run: |
+          SOURCE=$(ls dist/*.tgz)
+          mv "$SOURCE" "dist/${{ steps.meta.outputs.tag }}.tgz"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ steps.meta.outputs.tag }}"
+          body: "Automated release for extension **${{ steps.meta.outputs.ext }}** version **${{ steps.meta.outputs.version }}**."
+          files: dist/${{ steps.meta.outputs.tag }}.tgz
