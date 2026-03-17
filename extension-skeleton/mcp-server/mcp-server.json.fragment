@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "default": {
+      "command": "node",
+      "args": ["${extensionPath}/dist/index.js"]
+    }
+  }
+}
