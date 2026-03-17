@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "groupName": "MCP Ecosystem",
+      "description": "Group all MCP-related dependency updates together",
+      "branchTopic": "mcp-ecosystem",
+      "branchPrefix": "renovate/mcp/",
+      "rebaseWhen": "behind-base-branch",
+      "matchPackageNames": [
+        "/mcp/",
+        "/modelcontextprotocol/"
+      ]
+    },
+    {
+      "groupName": "TypeScript & Node types",
+      "matchPackageNames": [
+        "typescript",
+        "@types/node"
+      ]
+    },
+    {
+      "groupName": "Semantic Release",
+      "matchPackageNames": [
+        "/semantic-release/"
+      ]
+    }
+  ]
+}
