@@ -2,8 +2,7 @@ name: Analyze & Release (Monorepo)
 
 on:
   push:
-    # CI HACK: temporarily include feat/ci-cd for testing — remove before merge
-    branches: [main, feat/ci-cd]
+    branches: [main]
     tags-ignore:
       - "**"
 
@@ -37,8 +36,6 @@ jobs:
       - name: Run monorepo release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # CI HACK: force dry-run on non-main branches — remove before merge
-          DRY_RUN: ${{ github.ref_name != 'main' && 'true' || 'false' }}
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
           GIT_COMMITTER_NAME: github-actions[bot]
