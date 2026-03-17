@@ -24,7 +24,7 @@ for dir in extensions/*/; do
     # Pre-package the extension so the .tgz is ready for upload
     echo "Packaging $EXT_NAME..."
     mkdir -p "$ROOT_DIR/dist"
-    TARBALL=$(cd "$dir" && npm pack --pack-destination "$ROOT_DIR/dist" 2>/dev/null)
+    TARBALL=$(cd "$dir" && npm pack --pack-destination "$ROOT_DIR/dist" 2>/dev/null | tail -1)
     TARBALL_ABS="$ROOT_DIR/dist/$TARBALL"
     echo "Packaged: $TARBALL_ABS"
 
@@ -56,7 +56,7 @@ for dir in extensions/*/; do
     }],
     ["@semantic-release/git", {
       "assets": ["package.json", "CHANGELOG.md"],
-      "message": "🔖 ${EXT_NAME}-v\${nextRelease.version} [skip ci]\n\n\${nextRelease.notes}"
+      "message": "🔖 ${EXT_NAME}-v\${nextRelease.version} [skip ci]\\n\\n\${nextRelease.notes}"
     }]
   ]
 }
