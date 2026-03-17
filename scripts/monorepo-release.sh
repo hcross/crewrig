@@ -21,16 +21,20 @@ for dir in extensions/*/; do
     echo ""
     echo "--- Analyzing: $EXT_NAME ---"
 
-    # Architecture:
-    #   monorepo-release.sh  → tag + CHANGELOG + git commit (this script)
-    #   release-extension.yml → triggered by tag → package .tgz + GitHub Release
-    #
-    # semantic-release-gitmoji replaces BOTH commit-analyzer AND
-    # release-notes-generator. They must NOT be listed alongside it.
-    # semantic-release-monorepo is applied via "extends" and filters
-    # commits to only those touching this extension's directory.
-    # @semantic-release/github is NOT included here — the GitHub Release
-    # is created by the release-extension.yml workflow triggered by the tag.
+    # Pre-package the extension so the .tgz is ready for upload
+    echo "Packaging $EXT_NAME..."
+    mkdir -p "$ROOT_DIR/dist"
+    TARBALL=$(cd "$dir" && npm pack --pack-destination "$ROOT_DIR/dist" 2>/dev/null)
+    TARBALL_PATH="../../dist/$TARBALL"
+    echo "Packaged: $TARBALL"
+
+    # Architecture (single-job):
+    #   semantic-release-gitmoji → analyze commits (replaces commit-analyzer
+    #   AND release-notes-generator)
+    #   semantic-release-monorepo → scope commits to this extension's dir
+    #   @semantic-release/changelog → write CHANGELOG.md
+    #   @semantic-release/github → create GitHub Release with .tgz asset
+    #   @semantic-release/git → commit CHANGELOG + package.json back
     cat <<EOF > "${dir}.releaserc.json"
 {
   "extends": "semantic-release-monorepo",
@@ -45,6 +49,11 @@ for dir in extensions/*/; do
       }
     }],
     "@semantic-release/changelog",
+    ["@semantic-release/github", {
+      "assets": [
+        {"path": "$TARBALL_PATH", "label": "${EXT_NAME} (tgz)"}
+      ]
+    }],
     ["@semantic-release/git", {
       "assets": ["package.json", "CHANGELOG.md"],
       "message": "🔖 ${EXT_NAME}-v\${nextRelease.version} [skip ci]\n\n\${nextRelease.notes}"
