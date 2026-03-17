@@ -84,6 +84,29 @@ task setup-gemini-interactive
    level** via an interactive menu with live preview. It also handles your
    `PROFILE.md` (link, copy, or preserve an existing local version).
 
+### Community Config (optional)
+
+The `community-config/` directory is a collaborative sandbox for lightweight,
+prompt-based components that do not require executable code. Install them
+after the core setup:
+
+```bash
+# Install all community components (copy to ~/.gemini/)
+task install-workspace
+
+# Or link them for development (symlink mode)
+task link-workspace
+
+# Install a single component
+task install-component TYPE=skills NAME=ci-workflow-engineering
+
+# Remove a component
+task unlink-component TYPE=skills NAME=ci-workflow-engineering
+```
+
+Available component types: `commands`, `skills`, `hooks`, `agents`,
+`policies`, `mcp-servers`, `themes`.
+
 ## Repository Structure
 
 ```
@@ -98,12 +121,25 @@ config/
 │                          # DEVOPS-CLOUD, QA-AUTOMATION, PRODUCT-OWNER
 └── teams/                 # ATLAS, NOVA, FORGE, SENTINEL, HORIZON
 
+community-config/
+├── skills/                # Reusable agent skills
+│   └── ci-workflow-engineering/
+├── commands/              # Shared slash commands
+├── hooks/                 # Lifecycle hooks
+├── agents/                # Sub-agent definitions
+├── policies/              # Security policies
+├── mcp-servers/           # MCP server configurations
+└── themes/                # UI themes
+
 .gemini/commands/
 ├── init-soul.toml                # /init-soul command
 └── init-personal-profile.toml    # /init-personal-profile command
 
 scripts/
-└── setup-gemini-interactive.sh   # Interactive setup wizard
+├── setup-gemini-interactive.sh   # Interactive setup wizard
+├── manage-workspace-component.sh # Install/link individual components
+├── install-workspace.sh          # Bulk install all components
+└── unlink-component.sh           # Remove a component
 
 Taskfile.yml                      # Task runner configuration
 AGENTS.md                         # Agent working rules for this project
