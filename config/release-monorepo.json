@@ -9,7 +9,6 @@
       }
     }],
     "@semantic-release/changelog",
-    ["@semantic-release/github", {}],
     ["@semantic-release/git", {
       "assets": ["package.json", "CHANGELOG.md"],
       "message": "🔖 ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
