@@ -93,6 +93,26 @@ Requires `jq` for the merge operation.
 
 JSON theme definitions merged into `settings.json` on install.
 
+## Creating Extensions
+
+When a capability requires executable code (TypeScript MCP server, custom
+build steps), create a full extension instead of a community-config component.
+
+Use the `extension-skeleton/` directory as a starting point:
+
+1. Copy `extension-skeleton/base/` into `extensions/<your-name>/`.
+2. Add optional component directories you need (command, skill, agent, hook,
+   mcp-server, theme) from the skeleton.
+3. Replace every occurrence of `SKELETON_NAME` with your extension name.
+4. Implement your MCP server in `src/index.ts`.
+5. Test locally with `task link-extensions` and start a Gemini session.
+
+Each extension is an independent npm package with its own versioning. See
+`extensions/hello-world/` for a complete working reference.
+
+> **Warning:** never install or link the `extension-skeleton/` directory
+> itself. It is a template container, not a functional extension.
+
 ## Standards
 
 1. **Language**: all technical artifacts (code, commits, PRs) in **English**.

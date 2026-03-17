@@ -107,9 +107,39 @@ task unlink-component TYPE=skills NAME=ci-workflow-engineering
 Available component types: `commands`, `skills`, `hooks`, `agents`,
 `policies`, `mcp-servers`, `themes`.
 
+### Extensions (optional)
+
+Extensions are heavyweight, code-based capabilities (TypeScript MCP servers)
+packaged as independent npm modules:
+
+```bash
+# Install npm dependencies
+task install-deps
+
+# Install all extensions (copy to ~/.gemini/extensions/)
+task install-extensions
+
+# Or link for development
+task link-extensions
+
+# Install a single extension
+task install-extension EXT=hello-world
+
+# Package an extension as .tgz
+task package-extension EXT=hello-world
+```
+
+See `extensions/hello-world/` for a complete working example and
+`extension-skeleton/` as a starting template.
+
 ## Repository Structure
 
 ```
+extensions/
+└── hello-world/           # Example extension (MCP server + command + skill)
+
+extension-skeleton/        # Template for creating new extensions
+
 config/
 ├── settings.json          # Gemini CLI settings and MCP servers
 ├── ORGANIZATION.md        # Company-wide policies (placeholder)
@@ -139,7 +169,12 @@ scripts/
 ├── setup-gemini-interactive.sh   # Interactive setup wizard
 ├── manage-workspace-component.sh # Install/link individual components
 ├── install-workspace.sh          # Bulk install all components
-└── unlink-component.sh           # Remove a component
+├── unlink-component.sh           # Remove a component
+├── install-extension.sh          # Install/link extensions
+├── link-extensions.sh            # Link all extensions (dev mode)
+├── unlink-extensions.sh          # Remove all extensions
+├── package-extension.sh          # Package a single extension
+└── package-extensions.sh         # Package all extensions
 
 Taskfile.yml                      # Task runner configuration
 AGENTS.md                         # Agent working rules for this project
