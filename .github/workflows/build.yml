@@ -38,4 +38,4 @@ jobs:
         run: npm install -g markdownlint-cli
 
       - name: Lint Markdown files
-        run: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton
+        run: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton --ignore communication

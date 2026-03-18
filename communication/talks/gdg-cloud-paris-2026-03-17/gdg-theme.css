@@ -1,0 +1,382 @@
+/* GDG Material Theme - Gemini CLI en équipe */
+/* Couleurs Google : Rouge #EA4335 | Bleu #4285F4 | Jaune #FBBC04 | Vert #34A853 */
+
+/* ===== Import Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* ===== Base ===== */
+.reveal {
+  font-family: 'Google Sans', 'Outfit', 'Roboto', sans-serif;
+  color: #202124;
+}
+
+.reveal .slides section {
+  padding: 40px 60px !important;
+}
+
+/* Slides normales : centrées verticalement et horizontalement */
+.reveal .slides section:not(.slide-gauche) {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  height: 100% !important;
+}
+.reveal .slides section:not(.slide-gauche) > div {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+.reveal .slides section:not(.slide-gauche) h2,
+.reveal .slides section:not(.slide-gauche) h3 {
+  text-align: center !important;
+}
+
+/* Slide titre et fin : alignement gauche — uniquement enfant direct de .slides */
+.reveal .slides > section.slide-gauche {
+  text-align: left !important;
+  margin-left: 5% !important;
+}
+.reveal .slides > section.slide-gauche h2,
+.reveal .slides > section.slide-gauche h3 {
+  text-align: left !important;
+}
+/* Slides normales : légèrement décalées vers la gauche */
+.reveal .slides > section:not(.slide-gauche) {
+  margin-left: -10% !important;
+}
+/* Slides plein écran (démo, demo-live, fin) : pas de décalage */
+.reveal .slides > section:has(.demo-blue),
+.reveal .slides > section:has(.demo-yellow),
+.reveal .slides > section:has(.demo-green),
+.reveal .slides section.demo-blue,
+.reveal .slides section.demo-yellow,
+.reveal .slides section.demo-green,
+.reveal .slides section.demo-live {
+  margin-left: 0 !important;
+}
+
+/* ===== Titres ===== */
+.reveal h1, .reveal h2 {
+  font-family: 'Google Sans', 'Outfit', sans-serif;
+  color: #202124;
+  text-transform: none;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+.reveal h3 {
+  font-family: 'Google Sans', 'Outfit', sans-serif;
+  color: #5f6368;
+  text-transform: none;
+  font-weight: 400;
+  text-align: left;
+}
+
+.reveal h2 strong, .reveal h3 strong {
+  color: #4285F4;
+}
+
+/* ===== Code inline ===== */
+.reveal code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #e8f0fe;
+  color: #1967d2;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* ===== Aplat concave fixe — sur .reveal .slides ===== */
+/* Reste en place pendant les transitions, change de couleur via data-state */
+.reveal .slides::after {
+  content: '';
+  position: absolute;
+  top: -10%;
+  right: -5%;
+  width: 22%;
+  height: 120%;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 25% 50%);
+  pointer-events: none;
+  z-index: 1;
+  background-color: transparent;
+  transition: background-color 0.8s ease, opacity 0.8s ease;
+  opacity: 1;
+}
+
+/* Couleurs par acte via :has() + data-state sur la section present */
+/* PAS de !important pour que les transitions CSS fonctionnent */
+.reveal .slides:has(> section.present[data-state="acte-bleu"])::after,
+.reveal .slides:has(> section.present > section.present[data-state="acte-bleu"])::after {
+  background-color: #4285F4;
+  opacity: 1;
+}
+.reveal .slides:has(> section.present[data-state="acte-rouge"])::after,
+.reveal .slides:has(> section.present > section.present[data-state="acte-rouge"])::after {
+  background-color: #EA4335;
+  opacity: 1;
+}
+.reveal .slides:has(> section.present[data-state="acte-jaune"])::after,
+.reveal .slides:has(> section.present > section.present[data-state="acte-jaune"])::after {
+  background-color: #FBBC04;
+  opacity: 1;
+}
+.reveal .slides:has(> section.present[data-state="acte-vert"])::after,
+.reveal .slides:has(> section.present > section.present[data-state="acte-vert"])::after {
+  background-color: #34A853;
+  opacity: 1;
+}
+/* Pas d'aplat */
+.reveal .slides:has(> section.present[data-state="no-aplat"])::after,
+.reveal .slides:has(> section.present > section.present[data-state="no-aplat"])::after {
+  opacity: 0;
+}
+
+/* ===== Slides de démo — fond de couleur ===== */
+.demo-blue {
+  background: #4285F4 !important;
+}
+.demo-blue h2, .demo-blue h3 {
+  color: #fff !important;
+}
+
+.demo-yellow {
+  background: #FBBC04 !important;
+}
+.demo-yellow h2, .demo-yellow h3 {
+  color: #202124 !important;
+}
+
+.demo-green {
+  background: #34A853 !important;
+}
+.demo-green h2, .demo-green h3 {
+  color: #fff !important;
+}
+
+/* ===== Footer permanent — logos SFEIR + / + GDG ===== */
+.reveal::before {
+  content: '|';
+  position: fixed;
+  bottom: 2.2vh;
+  left: 2.5vw;
+  width: 10vw;
+  height: 6.5vh;
+  line-height: 6.5vh;
+  background: url('assets/Sfeir-Gris-designer.png') left center / auto 4.48vh no-repeat;
+  z-index: 30;
+  pointer-events: none;
+  text-align: right;
+  font-size: 6.5vh;
+  color: #000;
+  font-family: 'Helvetica Neue', 'Arial Narrow', sans-serif;
+  font-weight: 100;
+}
+.reveal::after {
+  content: '';
+  position: fixed;
+  bottom: 3.2vh;
+  left: 13vw;
+  width: 8.96vw;
+  height: 4.48vh;
+  background: url('assets/logo-gdg.svg') left center / contain no-repeat;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* ===== Slide de fin ===== */
+.slide-fin {
+  padding-right: 20px !important;
+  overflow: visible !important;
+}
+/* Texte blanc sur fond sombre */
+.slide-fin h2, .slide-fin h3, .slide-fin p, .slide-fin a, .slide-fin {
+  color: #fff !important;
+}
+.slide-fin h3 {
+  color: #ccc !important;
+}
+/* Masquer le footer sur la slide de fin */
+.reveal:has(.slides > section.present.slide-fin)::before,
+.reveal:has(.slides > section.present.slide-fin)::after {
+  opacity: 0 !important;
+}
+
+/* ===== Table ===== */
+.reveal table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.85em;
+}
+
+.reveal table th {
+  background: #e8f0fe;
+  color: #1967d2;
+  font-weight: 700;
+  text-align: left;
+}
+
+.reveal table td, .reveal table th {
+  padding: 0.5em 1em;
+  border: 1px solid #dadce0;
+}
+
+.reveal table tr:nth-child(even) {
+  background: #f1f3f4;
+}
+
+/* ===== Barre de progression ===== */
+.reveal .progress span {
+  background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC04, #34A853);
+}
+
+/* ===== Contrôles reveal.js — toujours bleu ===== */
+.reveal .controls {
+  color: #4285F4 !important;
+}
+.reveal .controls button {
+  color: #4285F4 !important;
+  transition: color 0.8s ease, filter 0.8s ease;
+}
+.reveal .controls .navigate-left,
+.reveal .controls .navigate-right,
+.reveal .controls .navigate-up,
+.reveal .controls .navigate-down {
+  color: #4285F4 !important;
+  filter: drop-shadow(0 0 0.3em #2b5fad) !important;
+}
+.reveal .controls .navigate-left.enabled,
+.reveal .controls .navigate-right.enabled,
+.reveal .controls .navigate-up.enabled,
+.reveal .controls .navigate-down.enabled {
+  color: #4285F4 !important;
+}
+.reveal .controls .navigate-left.enabled:hover,
+.reveal .controls .navigate-right.enabled:hover,
+.reveal .controls .navigate-up.enabled:hover,
+.reveal .controls .navigate-down.enabled:hover {
+  color: #1967d2 !important;
+}
+
+/* Couleur des contrôles par acte via :has() */
+.reveal:has(.slides > section.present[data-state="acte-rouge"]) .controls button,
+.reveal:has(.slides > section.present > section.present[data-state="acte-rouge"]) .controls button {
+  color: #EA4335 !important;
+  filter: drop-shadow(0 0 0.3em #a3281f) !important;
+}
+.reveal:has(.slides > section.present[data-state="acte-bleu"]) .controls button,
+.reveal:has(.slides > section.present > section.present[data-state="acte-bleu"]) .controls button {
+  color: #4285F4 !important;
+  filter: drop-shadow(0 0 0.3em #2b5fad) !important;
+}
+.reveal:has(.slides > section.present[data-state="acte-jaune"]) .controls button,
+.reveal:has(.slides > section.present > section.present[data-state="acte-jaune"]) .controls button {
+  color: #FBBC04 !important;
+  filter: drop-shadow(0 0 0.3em #b88a03) !important;
+}
+.reveal:has(.slides > section.present[data-state="acte-vert"]) .controls button,
+.reveal:has(.slides > section.present > section.present[data-state="acte-vert"]) .controls button {
+  color: #34A853 !important;
+  filter: drop-shadow(0 0 0.3em #247a3a) !important;
+}
+
+/* Couleur des contrôles pour les slides de démo */
+.reveal:has(.slides section.present.demo-blue) .controls button,
+.reveal:has(.slides section.present > section.present.demo-blue) .controls button {
+  color: #fff !important;
+  filter: drop-shadow(0 0 0.3em #2b5fad) !important;
+}
+.reveal:has(.slides section.present.demo-yellow) .controls button,
+.reveal:has(.slides section.present > section.present.demo-yellow) .controls button {
+  color: #202124 !important;
+  filter: drop-shadow(0 0 0.3em #b88a03) !important;
+}
+.reveal:has(.slides section.present.demo-green) .controls button,
+.reveal:has(.slides section.present > section.present.demo-green) .controls button {
+  color: #fff !important;
+  filter: drop-shadow(0 0 0.3em #247a3a) !important;
+}
+
+/* ===== Masquer le bouton pointer/crayon en haut à droite ===== */
+.cursor-pointer-toggle,
+.spotlight-toggle,
+.pointer-toggle,
+.reveal > button,
+.reveal > .pointer,
+body > button:not(.navigate-left):not(.navigate-right):not(.navigate-up):not(.navigate-down) {
+  display: none !important;
+}
+
+/* ===== Numéro de slide ===== */
+.reveal .slide-number {
+  color: #5f6368;
+  font-family: 'Google Sans', 'Outfit', sans-serif;
+  font-size: 14px;
+}
+
+/* ===== Blockquote ===== */
+.reveal blockquote {
+  border-left: 4px solid #4285F4;
+  background: #e8f0fe;
+  color: #202124;
+  padding: 0.5em 1em;
+  font-style: italic;
+  border-radius: 0 8px 8px 0;
+}
+
+/* ===== Google line separator ===== */
+.google-line {
+  height: 4px;
+  border: none;
+  margin: 0.8em 0;
+  background: linear-gradient(90deg, #4285F4 25%, #EA4335 25%, #EA4335 50%, #FBBC04 50%, #FBBC04 75%, #34A853 75%);
+  border-radius: 2px;
+  width: 200px;
+}
+
+/* ===== Masquer le bouton pointer/crayon ===== */
+.reveal .slide-chalkboard-buttons,
+.reveal .fa-pen,
+.reveal [id*="chalkboard"],
+.reveal [id*="pointer"],
+.reveal .spotlight,
+.reveal button.spotlight {
+  display: none !important;
+}
+
+/* ===== Fade-in/out du texte pendant la transition slide ===== */
+/* Texte invisible par défaut */
+.reveal .slides section h2,
+.reveal .slides section h3,
+.reveal .slides section p,
+.reveal .slides section li,
+.reveal .slides section table,
+.reveal .slides section blockquote,
+.reveal .slides section hr {
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+/* Texte visible quand la slide est active */
+.reveal .slides section.present h2,
+.reveal .slides section.present h3,
+.reveal .slides section.present p,
+.reveal .slides section.present li,
+.reveal .slides section.present table,
+.reveal .slides section.present blockquote,
+.reveal .slides section.present hr {
+  opacity: 1;
+  transition: opacity 0.1s ease;
+}
+
+/* ===== Links ===== */
+.reveal a {
+  color: #1a73e8;
+  text-decoration: none;
+}
