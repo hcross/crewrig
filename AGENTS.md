@@ -6,11 +6,14 @@ This document defines the rules and conventions that all agents (human or AI) mu
 
 All project content (code, comments, documentation, commits, issues, PRs) **must be written in English**.
 
+**Exception:** Interpersonal interactions between the user and the agent (chat sessions) MUST be conducted in the **User Preferred Language**.
+
 ## Branching Strategy
 
 - The primary branch is `main`, linked to the `origin` remote (GitHub).
 - The `main` branch is **protected**: no direct pushes allowed.
 - Every change must go through a **feature branch** merged into `main` via a Pull Request.
+- **NEVER merge a Pull Request (PR/MR)** without asking for the user's formal permission JUST BEFORE executing the merge.
 - The `import/gitlab` branch tracks the legacy GitLab project (`gitlab` remote) and serves as inspiration only.
 
 ## Commit Convention
