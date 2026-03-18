@@ -11,28 +11,41 @@
 </head>
 <body>
   <div class="reveal">
-    <div class="slides">
-      <section
-        data-markdown="Slides.md"
-        data-separator="^---$"
-        data-separator-vertical="^--$"
-        data-separator-notes="^note:"
-        data-charset="utf-8">
-      </section>
-    </div>
+    <div class="slides" id="slides"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
   <script>
-    Reveal.initialize({
-      width: 1920,
-      height: 1080,
-      center: false,
-      hash: true,
-      transition: 'slide',
-      plugins: [RevealMarkdown]
-    });
+    fetch('Slides.md')
+      .then(r => r.text())
+      .then(md => {
+        // Strip YAML frontmatter (--- ... ---) so it is not parsed as slide separators
+        md = md.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+        const container = document.getElementById('slides');
+        const section = document.createElement('section');
+        section.setAttribute('data-markdown', '');
+        section.setAttribute('data-separator', '^---$');
+        section.setAttribute('data-separator-vertical', '^--$');
+        section.setAttribute('data-separator-notes', '^note:');
+
+        const script = document.createElement('script');
+        script.setAttribute('type', 'text/template');
+        script.textContent = md;
+        section.appendChild(script);
+
+        container.appendChild(section);
+
+        Reveal.initialize({
+          width: 1920,
+          height: 1080,
+          center: false,
+          hash: true,
+          transition: 'slide',
+          plugins: [RevealMarkdown]
+        });
+      });
   </script>
 </body>
 </html>
