@@ -5,9 +5,8 @@ explicitly directs otherwise.
 
 ## GitHub MCP Server
 
-Authenticated access to the GitHub API via OAuth. Use it for all GitHub
-interactions: repository browsing, issue and PR management, code review,
-branch operations, and release tracking.
+The GitHub MCP server MUST be used as a priority for all GitHub interactions,
+except for native `git` commands.
 
 ## Knowledge Graph Memory (`@modelcontextprotocol/server-memory`)
 
