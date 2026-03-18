@@ -28,11 +28,31 @@
   },
   "mcpServers": {
     "github": {
-      "httpUrl": "https://api.githubcopilot.com/mcp/"
+      "httpUrl": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer $GITHUB_PAT"
+      }
     },
-    "basic-memory": {
-      "command": "uvx",
-      "args": ["basic-memory", "mcp"]
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "deep-memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@basicmachines-co/basic-memory"
+      ]
+    },
+    "sequentialthinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
     }
   }
 }
