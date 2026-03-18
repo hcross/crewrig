@@ -6,7 +6,7 @@ Talk presented at [GDG Cloud Paris](https://gdg.community.dev/gdg-cloud-paris/) 
 
 > **Language:** French (`lang: fr`). An English version may be added later.
 
-**[View slides online (GitHub Pages)](https://hcross.github.io/gemini-configuration/talks/gdg-cloud-paris-2026-03-17/)**
+**[View slides online (GitHub Pages)](https://hcross.github.io/gemini-configuration/communication/talks/gdg-cloud-paris-2026-03-17/)**
 
 ## Viewing the slides
 
@@ -15,7 +15,7 @@ The presentation was built with [Slides Extended](https://github.com/ebullient/o
 ### Option 1 — GitHub Pages (recommended)
 
 The slides are deployed automatically via GitHub Pages:
-<https://hcross.github.io/gemini-configuration/talks/gdg-cloud-paris-2026-03-17/>
+<https://hcross.github.io/gemini-configuration/communication/talks/gdg-cloud-paris-2026-03-17/>
 
 ### Option 2 — Local HTTP server
 

@@ -188,7 +188,7 @@ DEVELOPMENT.md                    # Extension development guide
 
 | Date | Event | Title | Links |
 |------|-------|-------|-------|
-| 2026-03-17 | GDG Cloud Paris | L'IA ne fera rien sans nous | [README](communication/talks/gdg-cloud-paris-2026-03-17/README.md) · [Slides](https://hcross.github.io/gemini-configuration/talks/gdg-cloud-paris-2026-03-17/) |
+| 2026-03-17 | GDG Cloud Paris | L'IA ne fera rien sans nous | [README](communication/talks/gdg-cloud-paris-2026-03-17/README.md) · [Slides](https://hcross.github.io/gemini-configuration/communication/talks/gdg-cloud-paris-2026-03-17/) |
 
 ## MCP Servers
 
