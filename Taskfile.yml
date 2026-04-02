@@ -2,6 +2,7 @@ version: '3'
 
 vars:
   GEMINI_HOME: "{{.HOME}}/.gemini"
+  CLAUDE_HOME: "{{.HOME}}/.claude"
   REPO_DIR: "{{.PWD}}"
 
 tasks:
@@ -70,6 +71,55 @@ tasks:
       - sh: command -v fzf >/dev/null 2>&1
         msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
     cmd: bash {{.REPO_DIR}}/scripts/create-extension.sh
+
+  # --- Claude Code tasks ---
+
+  setup-claude-interactive:
+    desc: Interactive Claude Code setup with team/expertise/level selection
+    preconditions:
+      - sh: command -v fzf >/dev/null 2>&1
+        msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
+    cmd: bash {{.REPO_DIR}}/scripts/setup-claude-interactive.sh
+
+  install-claude-workspace:
+    desc: Install all community-config Claude Code components (copy mode)
+    cmds:
+      - bash {{.REPO_DIR}}/scripts/manage-claude-component.sh install claude-skills
+      - bash {{.REPO_DIR}}/scripts/manage-claude-component.sh install policies
+
+  link-claude-workspace:
+    desc: Link all community-config Claude Code components (symlink mode)
+    cmds:
+      - bash {{.REPO_DIR}}/scripts/manage-claude-component.sh link claude-skills
+      - bash {{.REPO_DIR}}/scripts/manage-claude-component.sh link policies
+
+  install-claude-component:
+    desc: "Install a single Claude Code component (task install-claude-component TYPE=claude-skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh install {{.TYPE}} {{.NAME}}
+
+  link-claude-component:
+    desc: "Link a single Claude Code component (task link-claude-component TYPE=claude-skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh link {{.TYPE}} {{.NAME}}
+
+  install-claude-extensions:
+    desc: Install all extensions for Claude Code (copy mode)
+    cmd: bash {{.REPO_DIR}}/scripts/install-claude-extension.sh install
+
+  link-claude-extensions:
+    desc: Link all extensions for Claude Code (symlink mode)
+    cmd: bash {{.REPO_DIR}}/scripts/install-claude-extension.sh link
+
+  install-claude-extension:
+    desc: "Install a single extension for Claude Code (task install-claude-extension EXT=hello-world)"
+    cmd: bash {{.REPO_DIR}}/scripts/install-claude-extension.sh install {{.EXT}}
+
+  setup-all:
+    desc: Run both Gemini CLI and Claude Code interactive setup
+    cmds:
+      - task: setup-gemini-interactive
+      - task: setup-claude-interactive
+
+  # --- Linting ---
 
   lint-markdown:
     desc: Check all Markdown files for lint compliance

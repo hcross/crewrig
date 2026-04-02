@@ -1,0 +1,10 @@
+{
+  "name": "SKELETON_NAME",
+  "version": "0.1.0",
+  "description": "Description of the SKELETON_NAME extension.",
+  "claude": {
+    "mcp": true,
+    "skills": ["skills/*/SKILL.md"],
+    "rules": []
+  }
+}

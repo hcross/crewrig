@@ -23,3 +23,6 @@ build/
 # Personal configuration (not committed)
 config/PROFILE.md
 config/SOUL.md
+
+# Claude Code local settings
+.claude/settings.local.json

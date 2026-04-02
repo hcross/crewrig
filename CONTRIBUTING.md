@@ -1,7 +1,8 @@
-# Contributing to Gemini Configuration
+# Contributing to AI Agent Configuration
 
 This guide explains how to add new configurations, skills, and components
-to the repository.
+to the repository. The framework supports both **Gemini CLI** and
+**Claude Code** as target platforms.
 
 ## Philosophy: The Community Sandbox
 
@@ -16,15 +17,21 @@ The `community-config/` directory serves as a **collaborative sandbox**:
 
 ### Link Mode (recommended during development)
 
-Link mode creates symbolic links from your local repository to `~/.gemini/`,
-so changes take effect immediately without reinstalling:
+Link mode creates symbolic links from your local repository to the target
+directory, so changes take effect immediately without reinstalling:
+
+**Gemini CLI** (`~/.gemini/`):
 
 ```bash
-# Link a single skill you are working on
 task link-component TYPE=skills NAME=my-new-skill
-
-# Link everything at once
 task link-workspace
+```
+
+**Claude Code** (`~/.claude/`):
+
+```bash
+task link-claude-component TYPE=claude-skills NAME=my-new-skill
+task link-claude-workspace
 ```
 
 ### Install Mode (stable snapshot)
@@ -33,8 +40,11 @@ Install mode copies files, producing a snapshot that does not change when
 you edit the repository:
 
 ```bash
+# Gemini CLI
 task install-component TYPE=skills NAME=my-new-skill
-task install-workspace
+
+# Claude Code
+task install-claude-component TYPE=claude-skills NAME=my-new-skill
 ```
 
 ### Removing a component
@@ -56,10 +66,12 @@ Detailed instructions for the model...
 """
 ```
 
-### Agent Skills (`community-config/skills/`)
+### Agent Skills
 
-Markdown files (`SKILL.md`) providing specialized instructions for specific
+Skills are `SKILL.md` files providing specialized instructions for specific
 tasks. Each skill lives in its own directory.
+
+**Gemini CLI** (`community-config/skills/`):
 
 ```markdown
 ---
@@ -71,6 +83,31 @@ description: "Brief description used for activation"
 
 Detailed workflows and instructions...
 ```
+
+**Claude Code** (`community-config/claude-skills/`):
+
+Same YAML frontmatter format. You can add Claude Code-specific fields like
+`allowed-tools`, `user-invocable`, `model`, or `effort`:
+
+```markdown
+---
+name: my-skill
+description: "Brief description used for activation"
+user-invocable: true
+allowed-tools:
+  - Read
+  - Write
+  - Bash
+---
+
+# Skill Title
+
+Detailed workflows and instructions...
+```
+
+When creating a new skill, provide versions for both platforms if the
+prompt content differs (e.g., Gemini uses `ask_user` while Claude Code
+uses conversational patterns).
 
 ### Lifecycle Hooks (`community-config/hooks/`)
 
@@ -120,5 +157,8 @@ Each extension is an independent npm package with its own versioning. See
 2. **Commits**: follow the [Gitmoji](https://gitmoji.dev/) convention.
 3. **PRs**: follow the format described in `AGENTS.md` (summary, reading
    guide, test plan, detailed description, linked logbook issue).
-4. **Secrets**: never commit credentials. Use `~/.gemini/.env` for local
-   tokens.
+4. **Secrets**: never commit credentials. Use `~/.gemini/.env` or shell
+   environment variables for local tokens.
+5. **Dual-platform**: when adding skills or commands, provide versions for
+   both Gemini CLI (`.toml` / `community-config/skills/`) and Claude Code
+   (`SKILL.md` / `community-config/claude-skills/`).

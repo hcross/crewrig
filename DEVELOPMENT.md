@@ -1,7 +1,8 @@
 # Extension Development Guide
 
 This document covers the full lifecycle of creating, developing, testing,
-and releasing extensions in this monorepo.
+and releasing extensions in this monorepo. Extensions work with both
+**Gemini CLI** and **Claude Code**.
 
 ## Creating a New Extension
 
@@ -36,7 +37,8 @@ The `extension-skeleton/` directory contains the template source:
 extension-skeleton/
 ├── .geminiignore                          # Prevents Gemini from loading templates
 ├── base/                                  # Always copied
-│   ├── gemini-extension.json              # Manifest (name, version, context)
+│   ├── gemini-extension.json              # Gemini CLI manifest
+│   ├── claude-extension.json              # Claude Code metadata (for install script)
 │   ├── package.json                       # npm package with MCP SDK dependency
 │   ├── tsconfig.json                      # TypeScript ES2022 / Node16
 │   ├── GEMINI.md                          # Agent context placeholder
@@ -71,12 +73,24 @@ npm install
 During development, use symlinks so changes take effect immediately
 without reinstalling:
 
+**Gemini CLI:**
+
 ```bash
 task link-extensions
 ```
 
 Start a Gemini session and your extension is loaded. Edit source files,
 rebuild with `npm run build`, and restart Gemini to pick up changes.
+
+**Claude Code:**
+
+```bash
+task link-claude-extensions
+```
+
+This merges the extension's MCP server config into `~/.claude/mcp.json`
+and symlinks skills into `~/.claude/skills/`. Restart Claude Code to
+pick up changes.
 
 ### Testing Locally
 
