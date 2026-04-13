@@ -1,0 +1,32 @@
+{
+  "hooks": [
+    {
+      "event": "BeforeAgent",
+      "matcher": "*",
+      "name": "transcript-user-prompt",
+      "type": "command",
+      "command": "bash ${GEMINI_PROJECT_DIR}/hooks/mempalace-transcript.sh"
+    },
+    {
+      "event": "AfterTool",
+      "matcher": "*",
+      "name": "transcript-tool-use",
+      "type": "command",
+      "command": "bash ${GEMINI_PROJECT_DIR}/hooks/mempalace-transcript.sh"
+    },
+    {
+      "event": "AfterModel",
+      "matcher": "*",
+      "name": "transcript-agent-response",
+      "type": "command",
+      "command": "bash ${GEMINI_PROJECT_DIR}/hooks/mempalace-transcript.sh"
+    },
+    {
+      "event": "SessionEnd",
+      "matcher": "*",
+      "name": "transcript-session-end",
+      "type": "command",
+      "command": "bash ${GEMINI_PROJECT_DIR}/hooks/mempalace-transcript.sh"
+    }
+  ]
+}
