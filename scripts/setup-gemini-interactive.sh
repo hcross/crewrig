@@ -39,7 +39,7 @@ if [ -f "$GEMINI_HOME/settings.json" ] && [ ! -L "$GEMINI_HOME/settings.json" ];
   mv "$GEMINI_HOME/settings.json" "$GEMINI_HOME/settings.json.ori"
   echo "  Backed up existing settings.json to settings.json.ori"
 fi
-ln -sfn "$REPO_DIR/config/settings.json" "$GEMINI_HOME/settings.json"
+ln -sfn "$REPO_DIR/config/gemini/settings.json" "$GEMINI_HOME/settings.json"
 echo "  Linked: settings.json"
 
 # Organization context
