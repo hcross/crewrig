@@ -1,0 +1,42 @@
+{
+  "name": "SKELETON_NAME",
+  "version": "0.1.0",
+  "description": "Description of the SKELETON_NAME extension.",
+  "components": {
+    "commands": {
+      "enabled": false,
+      "location": "commands/"
+    },
+    "skills": {
+      "enabled": false,
+      "location": "skills/"
+    },
+    "agents": {
+      "enabled": false,
+      "location": "agents/"
+    },
+    "hooks": {
+      "enabled": false,
+      "location": "hooks/"
+    }
+  },
+  "gemini": {
+    "contextFileName": "GEMINI.md",
+    "themes": [],
+    "hooks": []
+  },
+  "claude": {
+    "author": {
+      "name": "Your Name"
+    },
+    "contextFileName": "CLAUDE.md",
+    "skills": ["skills/*/SKILL.md"],
+    "agents": [],
+    "rules": [],
+    "hooks": {},
+    "defaultAllowedTools": ["Read", "Write", "Edit", "Bash"],
+    "settings": {},
+    "lsp": {},
+    "bin": null
+  }
+}
