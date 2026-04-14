@@ -1,20 +1,16 @@
 ---
 name: ci-workflow-engineering
-description: "Structured approach for building, debugging, and hardening CI/CD
-  pipelines. Activate when the agent needs to: create new workflow definitions,
-  diagnose failing jobs, validate pipeline changes on a branch before merge,
-  or integrate platform-specific resources (secrets, registries, certificates)."
-type: skill
-claude:
-  allowed-tools:
-    - Read
-    - Write
-    - Edit
-    - Bash
-    - Grep
-    - Glob
-  user-invocable: true
+description: "Structured approach for building, debugging, and hardening CI/CD pipelines. Activate when the agent needs to: create new workflow definitions, diagnose failing jobs, validate pipeline changes on a branch before merge, or integrate platform-specific resources (secrets, registries, certificates)."
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+user-invocable: true
 ---
+
 
 # CI Workflow Engineering
 

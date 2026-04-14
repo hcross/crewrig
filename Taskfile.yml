@@ -71,6 +71,38 @@ tasks:
         msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
     cmd: bash {{.REPO_DIR}}/scripts/create-extension.sh
 
+  # --- Community component build ---
+
+  build-components:
+    desc: Build all community components for both Gemini CLI and Claude Code
+    preconditions:
+      - sh: command -v yq >/dev/null 2>&1
+        msg: "yq is required. Install with: brew install yq"
+    cmd: bash {{.REPO_DIR}}/scripts/build-components.sh --target all
+
+  build-components-gemini:
+    desc: Build community components for Gemini CLI only
+    preconditions:
+      - sh: command -v yq >/dev/null 2>&1
+        msg: "yq is required. Install with: brew install yq"
+    cmd: bash {{.REPO_DIR}}/scripts/build-components.sh --target gemini
+
+  build-components-claude:
+    desc: Build community components for Claude Code only
+    preconditions:
+      - sh: command -v yq >/dev/null 2>&1
+        msg: "yq is required. Install with: brew install yq"
+    cmd: bash {{.REPO_DIR}}/scripts/build-components.sh --target claude
+
+  check-components:
+    desc: Check that generated community components match source (drift detection)
+    preconditions:
+      - sh: command -v yq >/dev/null 2>&1
+        msg: "yq is required. Install with: brew install yq"
+    cmd: bash {{.REPO_DIR}}/scripts/build-components.sh --target all --check
+
+  # --- Linting ---
+
   lint-markdown:
     desc: Check all Markdown files for lint compliance
     preconditions:
