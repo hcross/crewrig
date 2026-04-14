@@ -59,7 +59,7 @@ storage, a temporal knowledge graph, semantic search, and an agent diary.
 
 Organize knowledge using the palace metaphor:
 
-```
+```text
 MemPalace
 ├── wing: <project-name>                 # One wing per project
 │   ├── room: architecture-decisions     # ADRs, design choices
@@ -85,26 +85,29 @@ MemPalace
 
 Follow this protocol at every session:
 
-**1. Session Start — Search and Recall**
+#### 1. Session Start — Search and Recall
 
 Before starting any work:
+
 - Search MemPalace for `[TASK:ongoing]` diary entries to resume
   interrupted work.
 - Read recent diary entries for session continuity.
 - Query the Knowledge Graph for facts about the current project.
 
-**2. During Work — Continuous Persistence**
+#### 2. During Work — Continuous Persistence
 
 As you work, persist continuously:
+
 - Every significant decision → drawer in the relevant room.
 - Every obstacle + resolution → `obstacles-and-solutions` room.
 - Every fact or relationship → Knowledge Graph with validity window.
 - Task checkpoints → diary entry with `[TASK:ongoing]` or
   `[TASK:checkpoint]` tag.
 
-**3. Session End — Final Flush**
+#### 3. Session End — Final Flush
 
 Before ending:
+
 - Write a diary entry summarizing the session.
 - Update `[TASK:ongoing]` entries: mark `[TASK:done]` or leave ongoing
   with updated status.
@@ -114,8 +117,9 @@ Before ending:
 
 Use structured tags in Agent Diary entries to track tasks across sessions:
 
-**Starting a task:**
-```
+Starting a task:
+
+```text
 [TASK:ongoing] <task-id> | <brief-description>
 Status: <phase/step description>
 Next: <what to do next>
@@ -123,15 +127,17 @@ Blocked: <if blocked, why>
 Context: <key facts needed to resume>
 ```
 
-**Resuming a task:**
-```
+Resuming a task:
+
+```text
 [TASK:checkpoint] <task-id> | <brief-description>
 Resumed from: <previous diary entry reference>
 Progress: <what was accomplished since last checkpoint>
 ```
 
-**Completing a task:**
-```
+Completing a task:
+
+```text
 [TASK:done] <task-id> | <brief-description>
 Outcome: <result summary>
 Lessons: <what was learned>

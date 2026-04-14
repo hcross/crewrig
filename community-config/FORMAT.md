@@ -107,7 +107,8 @@ The `claude:` section adds Claude Code-specific frontmatter fields:
 
 ### Skill: `community-config/skills/<name>/SKILL.md`
 
-**Gemini CLI** → `.gemini/skills/<name>/SKILL.md`
+Gemini CLI → `.gemini/skills/<name>/SKILL.md`
+
 ```yaml
 ---
 name: <name>
@@ -116,7 +117,8 @@ description: <description>
 <body>
 ```
 
-**Claude Code** → `.claude/skills/<name>/SKILL.md`
+Claude Code → `.claude/skills/<name>/SKILL.md`
+
 ```yaml
 ---
 name: <name>
@@ -131,7 +133,8 @@ user-invocable: true  # from claude.user-invocable (if present)
 
 ### Command: `community-config/commands/<name>.md`
 
-**Gemini CLI** → `.gemini/commands/<name>.toml`
+Gemini CLI → `.gemini/commands/<name>.toml`
+
 ```toml
 description = "<description>"
 
@@ -140,7 +143,8 @@ prompt = """
 """
 ```
 
-**Claude Code** → `.claude/skills/<name>/SKILL.md`
+Claude Code → `.claude/skills/<name>/SKILL.md`
+
 ```yaml
 ---
 name: <name>
@@ -152,12 +156,14 @@ user-invocable: true
 
 ### Agent: `community-config/agents/<name>/AGENT.md`
 
-**Gemini CLI** → `agents/<name>/PROMPT.md`
+Gemini CLI → `agents/<name>/PROMPT.md`
+
 ```markdown
 <body only, no frontmatter>
 ```
 
-**Claude Code** → `.claude/agents/<name>/AGENT.md`
+Claude Code → `.claude/agents/<name>/AGENT.md`
+
 ```yaml
 ---
 name: <name>
