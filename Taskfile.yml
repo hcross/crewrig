@@ -71,6 +71,39 @@ tasks:
         msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
     cmd: bash {{.REPO_DIR}}/scripts/create-extension.sh
 
+  # --- Claude Code tasks ---
+
+  setup-claude-interactive:
+    desc: Interactive Claude Code setup with team/expertise/level selection (copy by default)
+    preconditions:
+      - sh: command -v fzf >/dev/null 2>&1
+        msg: "fzf is required. Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
+    cmd: bash {{.REPO_DIR}}/scripts/setup-claude-interactive.sh
+
+  install-claude-workspace:
+    desc: Install all community-config Claude Code components (copy mode)
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh install claude-skills
+
+  link-claude-workspace:
+    desc: Link all community-config Claude Code components (symlink mode — dev only)
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh link claude-skills
+
+  install-claude-component:
+    desc: "Install a single Claude Code component (task install-claude-component TYPE=claude-skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh install {{.TYPE}} {{.NAME}}
+
+  link-claude-component:
+    desc: "Link a single Claude Code component (task link-claude-component TYPE=claude-skills NAME=ci-workflow-engineering)"
+    cmd: bash {{.REPO_DIR}}/scripts/manage-claude-component.sh link {{.TYPE}} {{.NAME}}
+
+  build-claude-plugin:
+    desc: "Build a Claude Code plugin from an extension (task build-claude-plugin EXT=hello-world)"
+    cmd: bash {{.REPO_DIR}}/scripts/build-claude-plugin.sh {{.REPO_DIR}}/extensions/{{.EXT}}
+
+  install-claude-plugin:
+    desc: "Install a Claude Code plugin (task install-claude-plugin EXT=hello-world)"
+    cmd: bash {{.REPO_DIR}}/scripts/install-claude-plugin.sh {{.EXT}}
+
   # --- Community component build ---
 
   build-components:
