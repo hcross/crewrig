@@ -6,6 +6,9 @@ on:
     paths:
       - "**/package.json"
       - "**/settings.json"
+      - "**/mcp.json"
+      - "**/mcp.json.template"
+      - "**/extension.json"
 
 jobs:
   audit:
