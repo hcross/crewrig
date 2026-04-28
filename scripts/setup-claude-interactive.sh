@@ -235,7 +235,7 @@ else
   echo "  Full command:         $MEMPALACE_PYTHON_BIN -m mempalace.mcp_server"
   if mcp_is_registered mempalace; then
     echo "  Currently registered. If the existing entry uses the wrong Python, re-register it."
-    REPLACE_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% \
+    REPLACE_MEMPALACE=$(echo -e "yes\nno" | fzf --height 10% \
       --header "Replace existing MemPalace registration with the detected interpreter?")
     if [ "$REPLACE_MEMPALACE" = "yes" ]; then
       claude mcp remove --scope user mempalace >/dev/null 2>&1 || true
@@ -247,7 +247,7 @@ else
       MEMPALACE_INSTALLED=1
     fi
   else
-    INSTALL_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% --header "Install MemPalace MCP server now?")
+    INSTALL_MEMPALACE=$(echo -e "yes\nno" | fzf --height 10% --header "Install MemPalace MCP server now?")
     if [ "$INSTALL_MEMPALACE" = "yes" ]; then
       if mcp_register_user mempalace "$MEMPALACE_PYTHON_BIN" -m mempalace.mcp_server; then
         MEMPALACE_INSTALLED=1
@@ -340,7 +340,7 @@ if [ ! -e "$TARGET" ]; then
     "PROFILE.md -> rules/30-profile.md"
 elif ! diff -q "$REPO_DIR/config/PROFILE.md" "$TARGET" >/dev/null 2>&1; then
   echo "Local profile differs from repository version."
-  METHOD=$(echo -e "overwrite\nkeep-local" | fzf --height 10% --header "How to resolve?")
+  METHOD=$(echo -e "keep-local\noverwrite" | fzf --height 10% --header "How to resolve?")
   if [ "$METHOD" = "overwrite" ]; then
     mv "$TARGET" "${TARGET}.ori"
     install_file "$REPO_DIR/config/PROFILE.md" "$TARGET" \
@@ -370,7 +370,7 @@ if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
     echo "     (so the hook script imports mempalace from the right interpreter)"
   fi
   echo ""
-  CONFIRM_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Apply these changes to settings.json?")
+  CONFIRM_TRANSCRIPTS=$(echo -e "yes\nno" | fzf --height 10% --header "Apply these changes to settings.json?")
   if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
     [ -f "$SETTINGS_TARGET" ] || echo "{}" > "$SETTINGS_TARGET"
     backup_file "$SETTINGS_TARGET"
