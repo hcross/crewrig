@@ -280,16 +280,16 @@ if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
   CONFIRM_TRANSCRIPTS=$(echo -e "yes\nno" | fzf --height 10% --header "Apply these changes to settings.json?")
   if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
     backup_file "$SETTINGS_TARGET"
-    # Inject env vars into the command of each hook entry, then merge the
-    # patched hooks array into settings.json (replacing any existing one).
+    # Inject env vars into every command field nested under hooks.<event>[].hooks[],
+    # then deep-merge the patched hooks object into settings.json.
     ENV_PREFIX='MEMPALACE_TRANSCRIPT_ENABLED=1'
     if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
       ENV_PREFIX="MEMPALACE_TRANSCRIPT_ENABLED=1 MEMPALACE_PYTHON=$MEMPALACE_PYTHON_BIN"
     fi
     jq --arg envp "$ENV_PREFIX" \
-      '(.hooks[] | select(.type == "command") | .command) |= ($envp + " " + .)' \
+      '(.. | objects | select(.type? == "command") | .command) |= ($envp + " " + .)' \
       "$HOOKS_SRC" > "${SETTINGS_TARGET}.hooks.tmp"
-    jq -s '.[0] * {hooks: .[1].hooks}' \
+    jq -s '.[0] * .[1]' \
       "$SETTINGS_TARGET" "${SETTINGS_TARGET}.hooks.tmp" > "${SETTINGS_TARGET}.tmp"
     mv "${SETTINGS_TARGET}.tmp" "$SETTINGS_TARGET"
     rm -f "${SETTINGS_TARGET}.hooks.tmp"
