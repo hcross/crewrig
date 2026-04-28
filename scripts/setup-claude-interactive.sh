@@ -107,19 +107,35 @@ install_file() {
   fi
 }
 
-# --- Clean existing rules if requested ---
+# --- Existing rules: keep or refresh? ---
+# If existing rules are detected, the user can:
+#   - keep:    skip the entire rules-installation phase (shared config + team/
+#              expertise/level/profile selection). Useful when only MCP servers
+#              or transcript hooks need (re)configuring.
+#   - refresh: wipe existing rules and re-run the full selection flow.
+SKIP_RULES_CONFIG=0
 EXISTING=$(find "$CLAUDE_RULES" -maxdepth 1 \( -type f -o -type l \) -name "*.md" 2>/dev/null)
 if [ -n "$EXISTING" ]; then
   echo "Existing rule files found in $CLAUDE_RULES:"
   echo "$EXISTING" | sed "s|^$CLAUDE_RULES/|   - |"
   echo ""
-  DELETE_EXISTING=$(echo -e "no\nyes" | fzf --height 10% --header "Remove existing rules before starting?")
-  if [ "$DELETE_EXISTING" = "yes" ]; then
-    find "$CLAUDE_RULES" -maxdepth 1 \( -type f -o -type l \) -name "*.md" -delete
-    echo "Existing rules removed."
+  RULES_ACTION=$(echo -e "keep\nrefresh" | fzf --height 15% \
+    --header "Existing rules detected — keep them (skip selection) or refresh from scratch?")
+  if [ "$RULES_ACTION" = "keep" ]; then
+    SKIP_RULES_CONFIG=1
+    echo "Keeping existing rules. Team / expertise / level / profile selection will be skipped."
     echo ""
+  elif [ "$RULES_ACTION" = "refresh" ]; then
+    find "$CLAUDE_RULES" -maxdepth 1 \( -type f -o -type l \) -name "*.md" -delete
+    echo "Existing rules removed. Full selection flow will run."
+    echo ""
+  else
+    echo "No choice made. Aborting."
+    exit 1
   fi
 fi
+
+if [ "$SKIP_RULES_CONFIG" -ne 1 ]; then
 
 # --- Shared enterprise configuration ---
 echo "Installing shared configuration..."
@@ -132,12 +148,12 @@ install_file "$REPO_DIR/config/ORGANIZATION.md" "$CLAUDE_RULES/20-organization.m
 install_file "$REPO_DIR/config/TOOLS.md" "$CLAUDE_RULES/60-tools.md" \
   "TOOLS.md -> rules/60-tools.md"
 
-# SOUL.md (only if generated)
-if [ -f "$REPO_DIR/config/SOUL.md" ]; then
-  install_file "$REPO_DIR/config/SOUL.md" "$CLAUDE_RULES/00-soul.md" \
-    "SOUL.md -> rules/00-soul.md"
-fi
+# SOUL.md (guaranteed to exist by prerequisite check)
+install_file "$REPO_DIR/config/SOUL.md" "$CLAUDE_RULES/00-soul.md" \
+  "SOUL.md -> rules/00-soul.md"
 echo ""
+
+fi  # end: SKIP_RULES_CONFIG guard for shared configuration
 
 # --- MCP server registration via 'claude mcp add' ---
 # Claude Code reads MCP servers from ~/.claude.json (managed by 'claude mcp ...').
@@ -225,6 +241,8 @@ elif [ -f "$SETTINGS_TARGET" ]; then
 fi
 echo ""
 
+if [ "$SKIP_RULES_CONFIG" -ne 1 ]; then
+
 # --- Team selection ---
 echo "Select your team:"
 TEAM=$(for f in "$REPO_DIR"/config/teams/*.md; do basename "$f" .md; done \
@@ -287,6 +305,8 @@ elif ! diff -q "$REPO_DIR/config/PROFILE.md" "$TARGET" >/dev/null 2>&1; then
 else
   echo "Profile is up to date."
 fi
+
+fi  # end: SKIP_RULES_CONFIG guard for team/expertise/level/profile
 
 # --- Transcript hooks (opt-in) ---
 echo ""
