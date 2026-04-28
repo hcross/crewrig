@@ -359,31 +359,48 @@ echo ""
 ENABLE_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Enable automatic session recording to MemPalace? (opt-in)")
 if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
   HOOKS_SRC="$REPO_DIR/hooks/claude-transcript-hooks.json"
+  HOOK_SCRIPT_SRC="$REPO_DIR/hooks/mempalace-transcript.sh"
+  CLAUDE_HOOKS_DIR="$CLAUDE_HOME/hooks"
+  HOOK_SCRIPT_TARGET="$CLAUDE_HOOKS_DIR/mempalace-transcript.sh"
   echo ""
   echo "Activating transcript hooks will:"
-  echo "  1. Backup $SETTINGS_TARGET to ${SETTINGS_TARGET}.bak.<timestamp>"
-  echo "  2. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET"
-  echo "     (UserPromptSubmit, PostToolUse, Stop, SessionEnd will run mempalace-transcript.sh)"
-  echo "  3. Set env.MEMPALACE_TRANSCRIPT_ENABLED=\"1\" in $SETTINGS_TARGET"
+  echo "  1. Install the hook script to $HOOK_SCRIPT_TARGET (project-independent)"
+  echo "  2. Backup $SETTINGS_TARGET to ${SETTINGS_TARGET}.bak.<timestamp>"
+  echo "  3. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET, with each command"
+  echo "     rewritten to point at $HOOK_SCRIPT_TARGET (absolute path)"
+  echo "  4. Set env.MEMPALACE_TRANSCRIPT_ENABLED=\"1\" in $SETTINGS_TARGET"
   if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
-    echo "  4. Set env.MEMPALACE_PYTHON=\"$MEMPALACE_PYTHON_BIN\" in $SETTINGS_TARGET"
+    echo "  5. Set env.MEMPALACE_PYTHON=\"$MEMPALACE_PYTHON_BIN\" in $SETTINGS_TARGET"
     echo "     (so the hook script imports mempalace from the right interpreter)"
   fi
   echo ""
   CONFIRM_TRANSCRIPTS=$(echo -e "yes\nno" | fzf --height 10% --header "Apply these changes to settings.json?")
   if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
     [ -f "$SETTINGS_TARGET" ] || echo "{}" > "$SETTINGS_TARGET"
+    mkdir -p "$CLAUDE_HOOKS_DIR"
+    install_file "$HOOK_SCRIPT_SRC" "$HOOK_SCRIPT_TARGET" \
+      "mempalace-transcript.sh -> ~/.claude/hooks/mempalace-transcript.sh"
+    chmod +x "$HOOK_SCRIPT_TARGET" 2>/dev/null || true
     backup_file "$SETTINGS_TARGET"
     ENV_PATCH='{"MEMPALACE_TRANSCRIPT_ENABLED": "1"}'
     if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
       ENV_PATCH=$(jq -nc --arg py "$MEMPALACE_PYTHON_BIN" \
         '{"MEMPALACE_TRANSCRIPT_ENABLED": "1", "MEMPALACE_PYTHON": $py}')
     fi
+    # Rewrite every nested command to use the installed absolute hook path
+    # instead of the source-file's "$CLAUDE_PROJECT_DIR/..." token.
+    HOOKS_PATCHED_TMP="$(mktemp)"
+    jq --arg hook_path "$HOOK_SCRIPT_TARGET" \
+      '(.. | objects | select(.type? == "command") | .command) |=
+         gsub("\"\\$CLAUDE_PROJECT_DIR/hooks/mempalace-transcript.sh\""; ("\"" + $hook_path + "\""))' \
+      "$HOOKS_SRC" > "$HOOKS_PATCHED_TMP"
     jq -s --argjson patch "$ENV_PATCH" \
       '.[0] * .[1] | .env = ((.env // {}) + $patch)' \
-      "$SETTINGS_TARGET" "$HOOKS_SRC" > "${SETTINGS_TARGET}.tmp" && \
+      "$SETTINGS_TARGET" "$HOOKS_PATCHED_TMP" > "${SETTINGS_TARGET}.tmp" && \
       mv "${SETTINGS_TARGET}.tmp" "$SETTINGS_TARGET"
+    rm -f "$HOOKS_PATCHED_TMP"
     echo "  Transcript hooks merged into settings.json"
+    echo "  Hook script installed at $HOOK_SCRIPT_TARGET (no longer depends on the repo path)"
     echo "  env patched: $ENV_PATCH"
   else
     echo "  Transcript activation cancelled by user."

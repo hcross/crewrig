@@ -270,30 +270,42 @@ echo ""
 ENABLE_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Enable automatic session recording to MemPalace? (opt-in)")
 if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
   HOOKS_SRC="$REPO_DIR/hooks/gemini-transcript-hooks.json"
+  HOOK_SCRIPT_SRC="$REPO_DIR/hooks/mempalace-transcript.sh"
+  GEMINI_HOOKS_DIR="$GEMINI_HOME/hooks"
+  HOOK_SCRIPT_TARGET="$GEMINI_HOOKS_DIR/mempalace-transcript.sh"
   echo ""
   echo "Activating transcript hooks will:"
-  echo "  1. Backup $SETTINGS_TARGET to ${SETTINGS_TARGET}.bak.<timestamp>"
-  echo "  2. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET"
-  echo "  3. Hardcode MEMPALACE_TRANSCRIPT_ENABLED=1 (and MEMPALACE_PYTHON if detected)"
+  echo "  1. Install the hook script to $HOOK_SCRIPT_TARGET (project-independent)"
+  echo "  2. Backup $SETTINGS_TARGET to ${SETTINGS_TARGET}.bak.<timestamp>"
+  echo "  3. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET"
+  echo "  4. Rewrite each hook command to point at $HOOK_SCRIPT_TARGET (absolute path)"
+  echo "  5. Hardcode MEMPALACE_TRANSCRIPT_ENABLED=1 (and MEMPALACE_PYTHON if detected)"
   echo "     into each hook's command line — no shell-profile changes needed."
   echo ""
   CONFIRM_TRANSCRIPTS=$(echo -e "yes\nno" | fzf --height 10% --header "Apply these changes to settings.json?")
   if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
+    mkdir -p "$GEMINI_HOOKS_DIR"
+    install_file "$HOOK_SCRIPT_SRC" "$HOOK_SCRIPT_TARGET" \
+      "mempalace-transcript.sh -> ~/.gemini/hooks/mempalace-transcript.sh"
+    chmod +x "$HOOK_SCRIPT_TARGET" 2>/dev/null || true
     backup_file "$SETTINGS_TARGET"
-    # Inject env vars into every command field nested under hooks.<event>[].hooks[],
-    # then deep-merge the patched hooks object into settings.json.
     ENV_PREFIX='MEMPALACE_TRANSCRIPT_ENABLED=1'
     if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
       ENV_PREFIX="MEMPALACE_TRANSCRIPT_ENABLED=1 MEMPALACE_PYTHON=$MEMPALACE_PYTHON_BIN"
     fi
-    jq --arg envp "$ENV_PREFIX" \
-      '(.. | objects | select(.type? == "command") | .command) |= ($envp + " " + .)' \
+    # Rewrite every nested command: substitute the source-file token with the
+    # installed absolute path, then prefix env vars. Hooks become independent
+    # of any project-dir variable resolution.
+    jq --arg envp "$ENV_PREFIX" --arg hook_path "$HOOK_SCRIPT_TARGET" \
+      '(.. | objects | select(.type? == "command") | .command) |=
+         ($envp + " " + (gsub("\\$\\{GEMINI_PROJECT_DIR\\}/hooks/mempalace-transcript.sh"; $hook_path)))' \
       "$HOOKS_SRC" > "${SETTINGS_TARGET}.hooks.tmp"
     jq -s '.[0] * .[1]' \
       "$SETTINGS_TARGET" "${SETTINGS_TARGET}.hooks.tmp" > "${SETTINGS_TARGET}.tmp"
     mv "${SETTINGS_TARGET}.tmp" "$SETTINGS_TARGET"
     rm -f "${SETTINGS_TARGET}.hooks.tmp"
-    echo "  Transcript hooks merged into settings.json (with hardcoded env)"
+    echo "  Transcript hooks merged into settings.json"
+    echo "  Hook script installed at $HOOK_SCRIPT_TARGET (no longer depends on the repo path)"
   else
     echo "  Transcript activation cancelled by user."
   fi
