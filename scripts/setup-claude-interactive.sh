@@ -181,6 +181,32 @@ mcp_register_user() {
   fi
 }
 
+# Helper: detect a Python interpreter that can import mempalace.mcp_server
+# Tries (in order): pipx default venv, the python from the 'mempalace' wrapper
+# shebang, and finally `python3`. Echoes the first interpreter that works.
+detect_mempalace_python() {
+  local candidates=()
+  candidates+=("$HOME/.local/pipx/venvs/mempalace/bin/python")
+  local mp_bin shebang_py
+  mp_bin="$(command -v mempalace 2>/dev/null || true)"
+  if [ -n "$mp_bin" ] && [ -f "$mp_bin" ]; then
+    shebang_py="$(head -1 "$mp_bin" 2>/dev/null | sed -n 's|^#!\([^ ]*\).*|\1|p')"
+    [ -n "$shebang_py" ] && candidates+=("$shebang_py")
+  fi
+  candidates+=("python3")
+
+  local py
+  for py in "${candidates[@]}"; do
+    [ -n "$py" ] || continue
+    command -v "$py" >/dev/null 2>&1 || continue
+    if "$py" -c "import mempalace.mcp_server" >/dev/null 2>&1; then
+      echo "$py"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Backup ~/.claude.json once before any MCP mutation
 backup_file "$CLAUDE_USER_CONFIG"
 
@@ -198,19 +224,39 @@ echo ""
 
 # MemPalace (opt-in, persistent agent memory)
 echo "MemPalace MCP server (persistent agent memory):"
-echo "  Command: python3 -m mempalace.mcp_server"
-echo "  Prerequisite: the 'mempalace' Python package must be importable."
-INSTALL_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% --header "Install MemPalace MCP server now?")
-if [ "$INSTALL_MEMPALACE" = "yes" ]; then
-  if mcp_register_user mempalace python3 -m mempalace.mcp_server; then
-    MEMPALACE_INSTALLED=1
-  else
-    MEMPALACE_INSTALLED=0
-  fi
+MEMPALACE_INSTALLED=0
+MEMPALACE_PYTHON_BIN="$(detect_mempalace_python || true)"
+
+if [ -z "$MEMPALACE_PYTHON_BIN" ]; then
+  echo "  WARN: 'mempalace.mcp_server' is not importable from any candidate Python."
+  echo "        Install MemPalace first (e.g., 'pipx install mempalace'), then re-run this script."
 else
-  echo "  MemPalace install skipped."
-  echo "  To install later: claude mcp add --scope user mempalace -- python3 -m mempalace.mcp_server"
-  MEMPALACE_INSTALLED=0
+  echo "  Detected interpreter: $MEMPALACE_PYTHON_BIN"
+  echo "  Full command:         $MEMPALACE_PYTHON_BIN -m mempalace.mcp_server"
+  if mcp_is_registered mempalace; then
+    echo "  Currently registered. If the existing entry uses the wrong Python, re-register it."
+    REPLACE_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% \
+      --header "Replace existing MemPalace registration with the detected interpreter?")
+    if [ "$REPLACE_MEMPALACE" = "yes" ]; then
+      claude mcp remove --scope user mempalace >/dev/null 2>&1 || true
+      if mcp_register_user mempalace "$MEMPALACE_PYTHON_BIN" -m mempalace.mcp_server; then
+        MEMPALACE_INSTALLED=1
+      fi
+    else
+      echo "  Existing registration kept."
+      MEMPALACE_INSTALLED=1
+    fi
+  else
+    INSTALL_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% --header "Install MemPalace MCP server now?")
+    if [ "$INSTALL_MEMPALACE" = "yes" ]; then
+      if mcp_register_user mempalace "$MEMPALACE_PYTHON_BIN" -m mempalace.mcp_server; then
+        MEMPALACE_INSTALLED=1
+      fi
+    else
+      echo "  MemPalace install skipped."
+      echo "  To install later: claude mcp add --scope user mempalace -- $MEMPALACE_PYTHON_BIN -m mempalace.mcp_server"
+    fi
+  fi
 fi
 
 # Surface legacy ~/.claude/mcp.json (no longer used) to avoid confusion
@@ -319,16 +365,26 @@ if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
   echo "  2. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET"
   echo "     (UserPromptSubmit, PostToolUse, Stop, SessionEnd will run mempalace-transcript.sh)"
   echo "  3. Set env.MEMPALACE_TRANSCRIPT_ENABLED=\"1\" in $SETTINGS_TARGET"
+  if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
+    echo "  4. Set env.MEMPALACE_PYTHON=\"$MEMPALACE_PYTHON_BIN\" in $SETTINGS_TARGET"
+    echo "     (so the hook script imports mempalace from the right interpreter)"
+  fi
   echo ""
   CONFIRM_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Apply these changes to settings.json?")
   if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
     [ -f "$SETTINGS_TARGET" ] || echo "{}" > "$SETTINGS_TARGET"
     backup_file "$SETTINGS_TARGET"
-    jq -s '.[0] * .[1] | .env = ((.env // {}) + {"MEMPALACE_TRANSCRIPT_ENABLED": "1"})' \
+    ENV_PATCH='{"MEMPALACE_TRANSCRIPT_ENABLED": "1"}'
+    if [ -n "${MEMPALACE_PYTHON_BIN:-}" ]; then
+      ENV_PATCH=$(jq -nc --arg py "$MEMPALACE_PYTHON_BIN" \
+        '{"MEMPALACE_TRANSCRIPT_ENABLED": "1", "MEMPALACE_PYTHON": $py}')
+    fi
+    jq -s --argjson patch "$ENV_PATCH" \
+      '.[0] * .[1] | .env = ((.env // {}) + $patch)' \
       "$SETTINGS_TARGET" "$HOOKS_SRC" > "${SETTINGS_TARGET}.tmp" && \
       mv "${SETTINGS_TARGET}.tmp" "$SETTINGS_TARGET"
     echo "  Transcript hooks merged into settings.json"
-    echo "  MEMPALACE_TRANSCRIPT_ENABLED=1 set in settings.json env"
+    echo "  env patched: $ENV_PATCH"
   else
     echo "  Transcript activation cancelled by user."
   fi
