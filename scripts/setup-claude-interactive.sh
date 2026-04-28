@@ -46,6 +46,22 @@ command -v fzf >/dev/null 2>&1 || {
   echo "Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
   exit 1
 }
+command -v jq >/dev/null 2>&1 || {
+  echo "Error: jq is required but not installed."
+  echo "Install with: brew install jq (macOS) or apt-get install jq (Linux)"
+  exit 1
+}
+
+# --- Helper: timestamped backup of a file ---
+backup_file() {
+  local target="$1"
+  if [ -f "$target" ]; then
+    local stamp
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    cp "$target" "${target}.bak.${stamp}"
+    echo "  Backed up: ${target##*/} -> ${target##*/}.bak.${stamp}"
+  fi
+}
 
 # --- Helper: install a file (copy or link) ---
 install_file() {
@@ -100,7 +116,30 @@ if [ -f "$MCP_TARGET" ] && [ ! -L "$MCP_TARGET" ]; then
 fi
 cp "$REPO_DIR/config/claude/mcp.json.template" "$MCP_TARGET"
 echo "  Installed: mcp.json (Sequential Thinking)"
-echo "  Note: Install MemPalace as a Claude Code plugin separately."
+echo ""
+
+# --- MemPalace MCP server (opt-in, requires explicit confirmation) ---
+echo "MemPalace is the persistent agent memory used by this framework."
+echo "If you confirm, the following entry will be added to:"
+echo "    $MCP_TARGET"
+echo ""
+echo '    "mempalace": { "command": "python3", "args": ["-m", "mempalace.mcp_server"] }'
+echo ""
+echo "Prerequisite: the 'mempalace' Python package must be importable in your environment."
+echo ""
+INSTALL_MEMPALACE=$(echo -e "no\nyes" | fzf --height 10% --header "Install MemPalace MCP server now?")
+if [ "$INSTALL_MEMPALACE" = "yes" ]; then
+  backup_file "$MCP_TARGET"
+  jq '.mcpServers.mempalace = {"command":"python3","args":["-m","mempalace.mcp_server"]}' \
+    "$MCP_TARGET" > "${MCP_TARGET}.tmp" && mv "${MCP_TARGET}.tmp" "$MCP_TARGET"
+  echo "  Installed: MemPalace MCP server"
+  MEMPALACE_INSTALLED=1
+else
+  echo "  MemPalace install skipped."
+  echo "  To install later: jq '.mcpServers.mempalace = {\"command\":\"python3\",\"args\":[\"-m\",\"mempalace.mcp_server\"]}' \\"
+  echo "                      \$HOME/.claude/mcp.json > /tmp/m.json && mv /tmp/m.json \$HOME/.claude/mcp.json"
+  MEMPALACE_INSTALLED=0
+fi
 echo ""
 
 # --- Settings (optional) ---
@@ -190,15 +229,28 @@ fi
 echo ""
 ENABLE_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Enable automatic session recording to MemPalace? (opt-in)")
 if [ "$ENABLE_TRANSCRIPTS" = "yes" ]; then
-  echo "  Session transcript hooks enabled."
-  echo "  Set MEMPALACE_TRANSCRIPT_ENABLED=1 in your shell profile."
-  echo "  Hook registrations are in: hooks/claude-transcript-hooks.json"
+  HOOKS_SRC="$REPO_DIR/hooks/claude-transcript-hooks.json"
   echo ""
-  echo "  To activate, merge the hooks into your settings:"
-  echo "    jq -s '.[0] * .[1]' ~/.claude/settings.json hooks/claude-transcript-hooks.json > /tmp/merged.json"
-  echo "    mv /tmp/merged.json ~/.claude/settings.json"
+  echo "Activating transcript hooks will:"
+  echo "  1. Backup $SETTINGS_TARGET to ${SETTINGS_TARGET}.bak.<timestamp>"
+  echo "  2. Merge hooks from $HOOKS_SRC into $SETTINGS_TARGET"
+  echo "     (UserPromptSubmit, PostToolUse, Stop, SessionEnd will run mempalace-transcript.sh)"
+  echo "  3. Set env.MEMPALACE_TRANSCRIPT_ENABLED=\"1\" in $SETTINGS_TARGET"
+  echo ""
+  CONFIRM_TRANSCRIPTS=$(echo -e "no\nyes" | fzf --height 10% --header "Apply these changes to settings.json?")
+  if [ "$CONFIRM_TRANSCRIPTS" = "yes" ]; then
+    [ -f "$SETTINGS_TARGET" ] || echo "{}" > "$SETTINGS_TARGET"
+    backup_file "$SETTINGS_TARGET"
+    jq -s '.[0] * .[1] | .env = ((.env // {}) + {"MEMPALACE_TRANSCRIPT_ENABLED": "1"})' \
+      "$SETTINGS_TARGET" "$HOOKS_SRC" > "${SETTINGS_TARGET}.tmp" && \
+      mv "${SETTINGS_TARGET}.tmp" "$SETTINGS_TARGET"
+    echo "  Transcript hooks merged into settings.json"
+    echo "  MEMPALACE_TRANSCRIPT_ENABLED=1 set in settings.json env"
+  else
+    echo "  Transcript activation cancelled by user."
+  fi
 else
-  echo "  Session recording disabled (can enable later with: task enable-transcript-hooks)."
+  echo "  Session recording disabled (can enable later by re-running this script)."
 fi
 
 echo ""
@@ -221,4 +273,6 @@ echo ""
 echo "Next steps:"
 echo "  - Run 'claude /init-soul' to customize your agent identity"
 echo "  - Run 'claude /init-personal-profile' to create your profile"
-echo "  - Install MemPalace plugin: claude mcp add mempalace -- python -m mempalace.mcp_server"
+if [ "${MEMPALACE_INSTALLED:-0}" -ne 1 ]; then
+  echo "  - MemPalace MCP server is NOT installed (skipped during setup)."
+fi
