@@ -87,12 +87,26 @@ Follow this protocol at every session:
 
 #### 1. Session Start — Search and Recall
 
-Before starting any work:
+Before starting any work, perform a **cross-agent sweep** — a task may
+have been started by a sibling CLI (e.g., Gemini wrote `[TASK:ongoing]`;
+Claude Code must find it):
 
-- Search MemPalace for `[TASK:ongoing]` diary entries to resume
-  interrupted work.
-- Read recent diary entries for session continuity.
-- Query the Knowledge Graph for facts about the current project.
+1. Run `mempalace_search` with the **literal** query `[TASK:ongoing]`
+   (the tag is the keyword — do not mix in domain context, semantic
+   distance will push the entry out of range). This is the only tool
+   that surfaces diary entries from **all agents** at once.
+2. Call `mempalace_status` and inspect the `wing_<agent>` entries to
+   enumerate sibling agent diaries; run `mempalace_diary_read` on each
+   if recent cross-tool history is needed.
+3. Read your **own** recent diary (`mempalace_diary_read` with your
+   agent name) for session continuity.
+4. Query the Knowledge Graph (`mempalace_kg_query`) for facts about
+   the current project.
+
+**Important**: `mempalace_diary_read` is **per-agent** — it will never
+surface a `[TASK:ongoing]` entry written by another CLI. Always start
+with step 1 (literal-tag search) when resuming work that might be
+cross-tool.
 
 #### 2. During Work — Continuous Persistence
 
