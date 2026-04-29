@@ -196,7 +196,6 @@ config/
 ├── gemini/
 │   └── settings.json      # Gemini CLI settings and MCP servers
 ├── claude/
-│   ├── mcp.json.template  # Claude Code MCP server template
 │   └── settings.json.template
 ├── ORGANIZATION.md        # Company-wide policies
 ├── TOOLS.md               # Memory architecture and MCP server guidelines
@@ -224,7 +223,6 @@ community-config/
 
 .claude/                              # Claude Code project config
 ├── settings.json                     # Project permissions
-├── mcp.json                          # Project MCP servers
 └── skills/                           # Claude Code project skills
     ├── init-soul/SKILL.md
     └── init-personal-profile/SKILL.md
@@ -268,11 +266,22 @@ DEVELOPMENT.md                        # Extension development guide
 - **MemPalace** — Unified agent memory (replaces KG Memory + Deep Memory).
 - **Sequential Thinking** — Working memory for structured reasoning.
 
-### Claude Code (`.claude/mcp.json` + MemPalace plugin)
+### Claude Code (`~/.claude.json`, managed by `claude mcp add`)
 
-- **Sequential Thinking** — Working memory (configured in `.claude/mcp.json`).
-- **MemPalace** — Installed as a Claude Code plugin (via plugin system).
-- **GitHub** — Available via built-in MCP or project config.
+Claude Code reads MCP servers from `~/.claude.json`, not from any `mcp.json`
+file. The `setup-claude-interactive.sh` script registers them via
+`claude mcp add --scope user`. To inspect or manage them later:
+
+```bash
+claude mcp list                      # Show registered servers
+claude mcp add --scope user <name> -- <command> [args...]
+claude mcp remove <name>
+```
+
+- **Sequential Thinking** — Working memory; registered as user-scope.
+- **MemPalace** — Persistent agent memory; registered as user-scope (the
+  setup script auto-detects the right Python interpreter).
+- **GitHub** — Available via Claude Code's built-in connectors.
 
 ## Contributing
 

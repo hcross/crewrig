@@ -109,7 +109,7 @@ task check-components           # Drift detection (CI)
 | Agent | `agents/<name>/AGENT.md` | `agents/<name>/PROMPT.md` | `.claude/agents/<name>/AGENT.md` |
 | Hook | `hooks/` | hooks.json | settings.json merge |
 | Policy | `policies/` | YAML rule file | settings.json permissions |
-| MCP server | `mcp-servers/` | settings.json merge | mcp.json merge |
+| MCP server | `mcp-servers/` | settings.json merge | `claude mcp add --scope user` |
 | Theme | `themes/` | settings.json merge | *(not supported)* |
 
 ## Creating Extensions

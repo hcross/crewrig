@@ -65,25 +65,43 @@ place_component() {
   fi
 }
 
-# --- Merge JSON into mcp.json ---
-merge_mcp_json() {
+# --- Register an MCP server via 'claude mcp add --scope user' ---
+# Claude Code reads MCP servers from ~/.claude.json (managed by 'claude mcp ...').
+# Each fragment in community-config/mcp-servers/ is a JSON file shaped like:
+#   { "command": "...", "args": ["..."], "env": { ... } }
+register_mcp_server() {
   local json_file="$1"
-  local mcp_target="$CLAUDE_HOME/mcp.json"
-
-  command -v jq >/dev/null 2>&1 || { echo "Error: jq required for JSON merging."; exit 1; }
-
-  [ ! -f "$mcp_target" ] && echo '{"mcpServers":{}}' > "$mcp_target"
+  command -v jq >/dev/null 2>&1 || { echo "Error: jq required."; exit 1; }
+  command -v claude >/dev/null 2>&1 || {
+    echo "Error: 'claude' CLI required to register MCP servers."; exit 1;
+  }
 
   local entry_name
   entry_name=$(basename "$json_file" .json)
 
-  cp "$mcp_target" "${mcp_target}.bak"
-  jq --arg name "$entry_name" \
-     --slurpfile val "$json_file" \
-     '.mcpServers = ((.mcpServers // {}) + {($name): $val[0]})' \
-     "${mcp_target}.bak" > "$mcp_target"
+  if claude mcp list 2>/dev/null | grep -qE "^${entry_name}:[[:space:]]"; then
+    echo "  ${entry_name}: already registered, skipping"
+    return 0
+  fi
 
-  echo "  Merged: $entry_name into mcp.json"
+  local cmd
+  cmd=$(jq -r '.command // empty' "$json_file")
+  if [ -z "$cmd" ]; then
+    echo "  ${entry_name}: missing 'command' field, skipping"
+    return 1
+  fi
+
+  local args=()
+  while IFS= read -r arg; do
+    args+=("$arg")
+  done < <(jq -r '.args // [] | .[]' "$json_file")
+
+  if claude mcp add --scope user "$entry_name" -- "$cmd" "${args[@]}" >/dev/null 2>&1; then
+    echo "  ${entry_name}: registered (scope=user)"
+  else
+    echo "  ${entry_name}: FAILED — re-run manually: claude mcp add --scope user $entry_name -- $cmd ${args[*]}"
+    return 1
+  fi
 }
 
 # --- Dispatch by type ---
@@ -124,10 +142,10 @@ case "$TYPE" in
     if [ -n "$NAME" ]; then
       JSON="$SRC_DIR/$NAME.json"
       [ ! -f "$JSON" ] && { echo "Error: '$NAME.json' not found"; exit 1; }
-      merge_mcp_json "$JSON"
+      register_mcp_server "$JSON"
     else
       for item in "$SRC_DIR"/*.json; do
-        [ -f "$item" ] && merge_mcp_json "$item"
+        [ -f "$item" ] && register_mcp_server "$item"
       done
     fi
     ;;
