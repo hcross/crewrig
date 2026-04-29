@@ -181,6 +181,33 @@ mcp_register_user() {
   fi
 }
 
+# --- MemPalace version pin ---
+# The framework targets the v3.3.x line (see issue #30, Phase 0.1).
+# v3.3.3 introduces the `wing` parameter on diary tools, BM25 hybrid search,
+# and Halls — all relied upon by the cross-tool continuity protocol.
+MEMPALACE_MIN_VERSION="3.3.3"
+MEMPALACE_MAX_VERSION_EXCLUSIVE="3.4"
+
+# Echo the installed MemPalace version on stdout; exit non-zero if not importable.
+mempalace_installed_version() {
+  "$1" -c "from importlib.metadata import version; print(version('mempalace'))" 2>/dev/null
+}
+
+# Exit 0 if the MemPalace version available to <python> is within
+# [MEMPALACE_MIN_VERSION, MEMPALACE_MAX_VERSION_EXCLUSIVE), 1 otherwise.
+mempalace_version_in_range() {
+  local py="$1"
+  "$py" - <<EOF >/dev/null 2>&1
+import sys
+from importlib.metadata import version
+from packaging.version import Version
+v = Version(version("mempalace"))
+mn = Version("${MEMPALACE_MIN_VERSION}")
+mx = Version("${MEMPALACE_MAX_VERSION_EXCLUSIVE}")
+sys.exit(0 if mn <= v < mx else 1)
+EOF
+}
+
 # Helper: detect a Python interpreter that can import mempalace.mcp_server
 # Tries (in order): pipx default venv, the python from the 'mempalace' wrapper
 # shebang, and finally `python3`. Echoes the first interpreter that works.
@@ -229,9 +256,16 @@ MEMPALACE_PYTHON_BIN="$(detect_mempalace_python || true)"
 
 if [ -z "$MEMPALACE_PYTHON_BIN" ]; then
   echo "  WARN: 'mempalace.mcp_server' is not importable from any candidate Python."
-  echo "        Install MemPalace first (e.g., 'pipx install mempalace'), then re-run this script."
+  echo "        Install MemPalace first, then re-run this script:"
+  echo "        pipx install 'mempalace>=${MEMPALACE_MIN_VERSION},<${MEMPALACE_MAX_VERSION_EXCLUSIVE}'"
 else
-  echo "  Detected interpreter: $MEMPALACE_PYTHON_BIN"
+  MEMPALACE_VERSION="$(mempalace_installed_version "$MEMPALACE_PYTHON_BIN")"
+  if ! mempalace_version_in_range "$MEMPALACE_PYTHON_BIN"; then
+    echo "  ERROR: MemPalace ${MEMPALACE_VERSION:-(unknown)} is outside the supported range >=${MEMPALACE_MIN_VERSION},<${MEMPALACE_MAX_VERSION_EXCLUSIVE}."
+    echo "         Upgrade with: pipx install --force 'mempalace>=${MEMPALACE_MIN_VERSION},<${MEMPALACE_MAX_VERSION_EXCLUSIVE}'"
+    exit 1
+  fi
+  echo "  Detected interpreter: $MEMPALACE_PYTHON_BIN (mempalace $MEMPALACE_VERSION)"
   echo "  Full command:         $MEMPALACE_PYTHON_BIN -m mempalace.mcp_server"
   if mcp_is_registered mempalace; then
     echo "  Currently registered. If the existing entry uses the wrong Python, re-register it."
@@ -424,7 +458,8 @@ claude mcp list 2>/dev/null | sed 's/^/  /' || echo "  (unable to list)"
 echo ""
 if [ "${MEMPALACE_INSTALLED:-0}" -ne 1 ]; then
   echo "Note: MemPalace MCP server was NOT installed during this run."
-  echo "      To install later: claude mcp add --scope user mempalace -- python3 -m mempalace.mcp_server"
+  echo "      Install MemPalace at the supported version, then re-run this script:"
+  echo "      pipx install 'mempalace>=${MEMPALACE_MIN_VERSION},<${MEMPALACE_MAX_VERSION_EXCLUSIVE}'"
   echo ""
 fi
 echo "Restart any running Claude Code session to pick up the new MCP servers."
