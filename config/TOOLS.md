@@ -62,103 +62,205 @@ Organize knowledge using the palace metaphor:
 ```text
 MemPalace
 ├── wing: <project-name>                 # One wing per project
+│   ├── room: task-handoff               # [TASK:*] cross-tool handoff lane
 │   ├── room: architecture-decisions     # ADRs, design choices
 │   ├── room: obstacles-and-solutions    # Problems + resolutions
 │   └── room: <topic-as-needed>          # Created organically
 │
+├── wing: wing_<agent-name>              # Per-agent diary (MCP-forced)
+│   └── room: diary                      # Reasoning provenance, self-recovery
+│
 ├── wing: <user-name>                    # Personal wing (optional)
-│   ├── room: preferences               # Working style, tool preferences
+│   ├── room: preferences                # Working style, tool preferences
 │   └── room: expertise                  # Domains of knowledge
 │
 └── wing: transcripts                    # Session recordings (if enabled)
-    └── room: <tool>-<date>-<session-id> # One room per session
+    └── room: <tool>-<date>-<session-id> # EXCLUDED from default sweep
 ```
 
-- **Wings**: Top-level grouping. One per project, plus optional personal
-  and transcript wings.
+- **Wings**: Top-level grouping. One per project, one per agent (auto-created
+  by diary writes), one per user (optional), plus the `transcripts` wing.
 - **Rooms**: Topic-based within a wing. Created as needed.
 - **Drawers**: Individual content entries within a room.
 - **Halls**: Connection types (facts, events, discoveries, preferences).
 - **Tunnels**: Cross-wing connections discovered automatically.
 
+#### Project name derivation
+
+`<project-name>` is computed once at session start:
+
+1. `git rev-parse --show-toplevel` → basename, if inside a git repo.
+2. Otherwise: `basename "$(pwd)"`.
+
+Stable across agents and across machines that clone the same repo at
+different paths. Do not use the auto-derived path-based wings produced
+by some hooks (e.g., `_users_..._gemini_configuration`); they are
+machine-specific and not cross-tool stable.
+
+#### Lane mapping — what writes where
+
+| Lane | Write tool | Storage | Visible cross-tool? |
+|---|---|---|---|
+| **Cross-tool task handoff** | `mempalace_add_drawer` | `wing="<project-name>"`, `room="task-handoff"` | Yes — primary handoff surface |
+| **Curated knowledge** | `mempalace_add_drawer` | `wing="<project-name>"`, `room="<topic>"` | Yes |
+| **Per-agent diary** | `mempalace_diary_write` | `wing_<agent-name>` (MCP-forced) | No — siloed by design |
+| **Raw archive** | hook-driven | `wing="transcripts"` | No — excluded from sweep |
+
+The MCP surface forces this split: only `mempalace_add_drawer` and
+`mempalace_update_drawer` accept arbitrary `wing` and `room` parameters.
+The diary tools (`mempalace_diary_write` / `mempalace_diary_read`) only
+expose `agent_name`, so diary entries always land in `wing_<agent-name>`
+and cannot serve as the cross-tool handoff surface.
+
 ### Memory Activation Protocol
 
 Follow this protocol at every session:
 
-#### 1. Session Start — Search and Recall
+#### 1. Session Start — Deterministic status-first sweep
 
-Before starting any work, perform a **cross-agent sweep** — a task may
-have been started by a sibling CLI (e.g., Gemini wrote `[TASK:ongoing]`;
-Claude Code must find it):
+Before starting any work, perform an ordered sweep designed to be
+deterministic — independent of BM25 weights, cosine thresholds, or
+semantic similarity heuristics:
 
-1. Run `mempalace_search` with the **literal** query `[TASK:ongoing]`
-   (the tag is the keyword — do not mix in domain context, semantic
-   distance will push the entry out of range). This is the only tool
-   that surfaces diary entries from **all agents** at once.
-2. Call `mempalace_status` and inspect the `wing_<agent>` entries to
-   enumerate sibling agent diaries; run `mempalace_diary_read` on each
-   if recent cross-tool history is needed.
-3. Read your **own** recent diary (`mempalace_diary_read` with your
-   agent name) for session continuity.
-4. Query the Knowledge Graph (`mempalace_kg_query`) for facts about
-   the current project.
+1. **Compute `<project-name>`** (see *Project name derivation* above).
 
-**Important**: `mempalace_diary_read` is **per-agent** — it will never
-surface a `[TASK:ongoing]` entry written by another CLI. Always start
-with step 1 (literal-tag search) when resuming work that might be
-cross-tool.
+2. **`mempalace_status`** — enumerate the wings present. Note the
+   exclusion list: any wing whose name starts with `transcripts` is
+   high-volume raw archive and is EXCLUDED from semantic searches.
+
+3. **Cross-tool handoff lookup** — the primary resume mechanism:
+
+   ```text
+   mempalace_search(
+     query="[TASK:ongoing]",
+     wing="<project-name>",
+     room="task-handoff"
+   )
+   ```
+
+   Wing+room scoped, immune to transcripts noise, signal-dense by
+   design. This is the canonical cross-tool task discovery path.
+
+   Apply the `visible_to` filter client-side: ignore any returned entry
+   whose `visible_to` field contains neither `*` nor your agent name.
+
+4. **Per-agent provenance** — your own reasoning trace, not
+   cross-tool discovery: `mempalace_diary_read(agent_name="<your-name>",
+   last_n=N)`. Used only to recover your own recent thought process.
+
+5. **Knowledge Graph** — `mempalace_kg_query` for facts about the
+   current project.
+
+**Why not `mempalace_search` without a wing filter?** The `transcripts`
+wing typically contains thousands of raw transcript drawers, many
+mentioning `[TASK:ongoing]` literally as documentation. Without a wing
+filter, transcript noise overwhelms the BM25 hybrid scoring and buries
+actual handoff entries. The wing+room scoped query above is the only
+deterministic discovery path through the current MCP surface.
+
+**Why not `mempalace_diary_read` for cross-tool resume?** The MCP
+surface for `mempalace_diary_read` does not expose a `wing` parameter
+— it only accepts `agent_name`. Diaries are per-agent silos at the MCP
+level; they cannot serve as the cross-tool handoff surface. Use them
+for your own provenance recovery only.
 
 #### 2. During Work — Continuous Persistence
 
 As you work, persist continuously:
 
-- Every significant decision → drawer in the relevant room.
-- Every obstacle + resolution → `obstacles-and-solutions` room.
-- Every fact or relationship → Knowledge Graph with validity window.
-- Task checkpoints → diary entry with `[TASK:ongoing]` or
-  `[TASK:checkpoint]` tag.
+- **Cross-tool task progress** → `mempalace_add_drawer` to
+  `wing="<project-name>"`, `room="task-handoff"` with a `[TASK:ongoing]`
+  or `[TASK:checkpoint]` payload (see *Long-Running Task Convention*
+  for the exact schema).
+- **Significant decisions** → drawer in the relevant project room
+  (e.g., `architecture-decisions`).
+- **Obstacles + resolutions** → drawer in `obstacles-and-solutions`.
+- **Facts and relationships** → Knowledge Graph with validity window.
+- **Per-agent reasoning trace** → `mempalace_diary_write` (your own
+  diary, for self-recovery — not cross-tool handoff).
 
 #### 3. Session End — Final Flush
 
 Before ending:
 
-- Write a diary entry summarizing the session.
-- Update `[TASK:ongoing]` entries: mark `[TASK:done]` or leave ongoing
-  with updated status.
-- Flush any un-persisted Sequential Thinking state to MemPalace.
+- **Update the cross-tool handoff drawer** in
+  `wing="<project-name>", room="task-handoff"`:
+  - If work continues: ensure a `[TASK:ongoing]` drawer reflects the
+    latest state. Prefer `mempalace_update_drawer` on the existing
+    drawer (preserves the `drawer_id` and KG references); fall back to
+    `mempalace_add_drawer` if you do not have the prior drawer_id.
+  - If work is complete: replace the payload with `[TASK:done]` via
+    `mempalace_update_drawer`.
+- **Write a per-agent diary entry** summarizing the session
+  (`mempalace_diary_write`) — self-recovery aid, not cross-tool.
+- **Flush** any un-persisted Sequential Thinking state to MemPalace.
 
 ### Long-Running Task Convention
 
-Use structured tags in Agent Diary entries to track tasks across sessions:
+Cross-tool tasks live as **drawers** in the handoff lane
+(`wing="<project-name>"`, `room="task-handoff"`), NOT as diary entries.
+The drawer `content` field carries a structured plain-text payload.
 
-Starting a task:
+Starting a task — `mempalace_add_drawer`:
 
 ```text
 [TASK:ongoing] <task-id> | <brief-description>
-Status: <phase/step description>
-Next: <what to do next>
-Blocked: <if blocked, why>
-Context: <key facts needed to resume>
+
+writer_agent: <agent-name>
+handoff_key: <task-id>
+visible_to: ["*"]
+status: <phase/step description>
+next: <what to do next>
+blocked: <if blocked, why>
+context: <key facts needed to resume>
 ```
 
-Resuming a task:
+Resuming a task — `mempalace_update_drawer` on the existing drawer
+(preserves `drawer_id` and KG links). The new content replaces the old:
 
 ```text
 [TASK:checkpoint] <task-id> | <brief-description>
-Resumed from: <previous diary entry reference>
-Progress: <what was accomplished since last checkpoint>
+
+writer_agent: <agent-name>
+handoff_key: <task-id>
+visible_to: ["*"]
+resumed_from: <previous drawer_id>
+progress: <what was accomplished since last checkpoint>
+status: <current phase/step>
+next: <what to do next>
+context: <updated facts>
 ```
 
-Completing a task:
+Completing a task — `mempalace_update_drawer`:
 
 ```text
 [TASK:done] <task-id> | <brief-description>
-Outcome: <result summary>
-Lessons: <what was learned>
+
+writer_agent: <agent-name>
+handoff_key: <task-id>
+visible_to: ["*"]
+outcome: <result summary>
+lessons: <what was learned>
 ```
 
-To resume work across sessions, search the diary for `[TASK:ongoing]`
-entries.
+#### Field semantics
+
+- `writer_agent` — agent identifier (e.g., `claude-code`, `gemini-cli`).
+  Closes the "guess the previous writer" failure mode by making
+  provenance explicit on every entry.
+- `handoff_key` — deterministic anchor. Matches the `<task-id>` in the
+  title line; useful for cross-referencing across drawer revisions or
+  related tasks.
+- `visible_to` — visibility allowlist. `["*"]` is the global default
+  (visible to every agent). `["<agent>"]` restricts to a specific agent.
+  `["<a>", "<b>"]` scopes to multiple agents. Reading agents apply the
+  filter **client-side**: ignore any entry whose `visible_to` does not
+  contain `*` and does not contain the reading agent's name. Honor
+  system; no platform-level enforcement.
+
+To resume work across sessions, the cross-tool sweep at session start
+hits `room="task-handoff"` directly — see *Memory Activation Protocol →
+Session Start*.
 
 ### Knowledge Graph Conventions
 
@@ -171,15 +273,29 @@ entries.
 
 ### MCP Tools Reference
 
-MemPalace provides 19 MCP tools:
+MemPalace exposes the following tool categories (v3.3.x). Tools used by
+the cross-tool handoff protocol are highlighted in **bold**.
 
 | Category | Tools |
 |----------|-------|
-| **Palace read** | `mempalace_status`, `mempalace_list_wings`, `mempalace_list_rooms`, `mempalace_get_taxonomy`, `mempalace_search`, `mempalace_check_duplicate`, `mempalace_get_aaak_spec` |
-| **Palace write** | `mempalace_add_drawer`, `mempalace_delete_drawer` |
-| **Knowledge Graph** | `mempalace_kg_query`, `mempalace_kg_add`, `mempalace_kg_invalidate`, `mempalace_kg_timeline`, `mempalace_kg_stats` |
+| **Palace read** | **`mempalace_status`**, `mempalace_list_wings`, `mempalace_list_rooms`, `mempalace_list_drawers`, `mempalace_get_drawer`, `mempalace_get_taxonomy`, **`mempalace_search`**, `mempalace_check_duplicate`, `mempalace_get_aaak_spec` |
+| **Palace write** | **`mempalace_add_drawer`**, **`mempalace_update_drawer`**, `mempalace_delete_drawer` |
+| **Knowledge Graph** | **`mempalace_kg_query`**, `mempalace_kg_add`, `mempalace_kg_invalidate`, `mempalace_kg_timeline`, `mempalace_kg_stats` |
 | **Navigation** | `mempalace_traverse`, `mempalace_find_tunnels`, `mempalace_graph_stats` |
-| **Agent Diary** | `mempalace_diary_write`, `mempalace_diary_read` |
+| **Agent Diary** | `mempalace_diary_write`, **`mempalace_diary_read`** |
+
+Notable v3.3.x facts that shape the protocol above:
+
+- `mempalace_add_drawer` and `mempalace_update_drawer` accept arbitrary
+  `wing` and `room` — the only MCP write paths that do. The handoff
+  lane is built on these.
+- `mempalace_diary_write` and `mempalace_diary_read` only accept
+  `agent_name`, not `wing` (despite the v3.3.3 changelog note about an
+  internal `wing` parameter). Diaries are MCP-level per-agent silos.
+- `mempalace_search` returns BM25-hybrid (60 % vector + 40 % keyword)
+  results since v3.3.0. The keyword share is real but does not
+  overcome volumetric imbalance from the `transcripts` wing — always
+  scope by `wing` and `room` for the handoff lookup.
 
 ---
 
@@ -205,17 +321,24 @@ reasoning and problem-solving in real-time.
    - Step 4: Select and execute the best path.
 3. **Branching**: If a path fails, backtrack and try an alternative.
 4. **Finalization**: Summarize the reasoning and persist the outcome to
-   MemPalace (drawer in relevant room + diary entry if task is ongoing).
+   MemPalace — drawer in the relevant project room, plus a
+   `[TASK:ongoing]` drawer in the handoff lane if work continues across
+   sessions.
 
 ### Persistence Obligation
 
 Sequential Thinking is ephemeral — it lives only within the current
 session. Before ending a session:
 
-- Persist the current plan state to MemPalace Agent Diary
-  (`[TASK:ongoing]` if work continues).
-- Record key decisions and reasoning as drawers in the relevant room.
+- If work continues, write or update the cross-tool handoff drawer
+  (`mempalace_add_drawer` / `mempalace_update_drawer` on
+  `wing="<project-name>"`, `room="task-handoff"`) with a
+  `[TASK:ongoing]` payload reflecting the current plan state.
+- Record key decisions and reasoning as drawers in the relevant project
+  room.
 - Record discovered facts in the Knowledge Graph.
+- Optionally write a per-agent diary entry (`mempalace_diary_write`)
+  for self-recovery — distinct from the cross-tool handoff drawer.
 
 ---
 
