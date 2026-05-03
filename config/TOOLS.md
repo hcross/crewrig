@@ -55,6 +55,19 @@ MemPalace is the unified persistent memory system, replacing the former
 Knowledge Graph Memory and Deep Memory servers. It provides palace-based
 storage, a temporal knowledge graph, semantic search, and an agent diary.
 
+> **MCP-only access.** Every MemPalace operation in this document
+> (`mempalace_status`, `mempalace_search`, `mempalace_add_drawer`,
+> `mempalace_update_drawer`, `mempalace_diary_*`, `mempalace_kg_*`, etc.)
+> is an **MCP tool call** routed through the registered `mempalace` MCP
+> server. **Never** invoke a `mempalace …` shell command via the Bash
+> tool. The `mempalace` CLI binary on `$PATH` exists for human admin
+> tasks (`init`, `migrate`, debug); calling it from an agent bypasses
+> the MCP server's session context, file locking, audit trail, and
+> protocol negotiation, and produces drawers the rest of the agent
+> network cannot see. If a procedure cannot be expressed via the MCP
+> tools listed in *MCP Tools Reference*, ask the user — do not reach
+> for the CLI as a workaround.
+
 ### Palace Structure Conventions
 
 Organize knowledge using the palace metaphor:
@@ -151,6 +164,24 @@ semantic similarity heuristics:
 5. **Knowledge Graph** — `mempalace_kg_query` for facts about the
    current project.
 
+6. **If step 3 returned a `[TASK:ongoing]` drawer for this project**
+   (i.e., a sibling agent's open work or a previous session of yours):
+   **immediately persist a `[TASK:checkpoint]` payload to that drawer
+   via `mempalace_update_drawer` BEFORE doing any actual task work.**
+   The checkpoint:
+
+   - Marks the resumption point with the current timestamp.
+   - Updates `writer_agent` to your own agent name.
+   - Records `resumed_from` (the previous drawer revision) and an
+     initial `progress` field describing the state you found.
+   - Preserves the `drawer_id` and `handoff_key` (use
+     `mempalace_update_drawer`, not `mempalace_add_drawer`).
+
+   **This step is mandatory, not optional.** Skipping it breaks the
+   audit trail of who-resumed-when and leaves siblings unable to detect
+   that the task has been picked up. Treat the checkpoint write as part
+   of the recovery itself, not as a chore to do "after the work".
+
 **Why not `mempalace_search` without a wing filter?** The `transcripts`
 wing typically contains thousands of raw transcript drawers, many
 mentioning `[TASK:ongoing]` literally as documentation. Without a wing
@@ -216,7 +247,10 @@ context: <key facts needed to resume>
 ```
 
 Resuming a task — `mempalace_update_drawer` on the existing drawer
-(preserves `drawer_id` and KG links). The new content replaces the old:
+(preserves `drawer_id` and KG links). The new content replaces the old.
+**The checkpoint write is mandatory the moment a `[TASK:ongoing]` drawer
+is found at session start (see *Session Start* step 6) — it is not
+something to defer until "real work" begins.**
 
 ```text
 [TASK:checkpoint] <task-id> | <brief-description>
