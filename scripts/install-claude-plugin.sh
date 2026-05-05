@@ -2,23 +2,29 @@
 # install-claude-plugin.sh — Install a Claude Code plugin from an extension
 #
 # Usage:
-#   bash scripts/install-claude-plugin.sh <extension-name> [--link]
+#   bash scripts/install-claude-plugin.sh <extension-name>
 #
-# Builds the Claude Code plugin from extension.json, then copies (default)
-# or symlinks (--link, dev only) it to ~/.claude/plugins/<name>/.
+# Builds the Claude Code plugin from extension.json, then registers it
+# through the official marketplace mechanism:
+#   1. `claude plugin marketplace add <dist-claude-plugin-dir>`
+#   2. `claude plugin install <name>@<marketplace>`
 #
-# Prerequisites: jq
+# Claude Code does NOT auto-discover plugins under ~/.claude/plugins/.
+# Plugins must be declared in a marketplace and installed via the CLI for
+# Claude Code to pick them up. Use `claude --plugin-dir <path>` for dev
+# mode if you want to skip the marketplace step.
+#
+# Prerequisites: jq, claude
 
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CLAUDE_PLUGINS="${HOME}/.claude/plugins"
-EXT_NAME="${1:?Usage: install-claude-plugin.sh <extension-name> [--link]}"
-LINK_MODE=false
+command -v jq >/dev/null 2>&1 || { echo "Error: jq is required. Install with: brew install jq"; exit 1; }
+command -v claude >/dev/null 2>&1 || {
+  echo "Error: 'claude' CLI is required. Install Claude Code first."; exit 1;
+}
 
-if [ "${2:-}" = "--link" ]; then
-  LINK_MODE=true
-fi
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+EXT_NAME="${1:?Usage: install-claude-plugin.sh <extension-name>}"
 
 EXT_DIR="$REPO_DIR/extensions/$EXT_NAME"
 if [ ! -d "$EXT_DIR" ]; then
@@ -26,42 +32,55 @@ if [ ! -d "$EXT_DIR" ]; then
   exit 1
 fi
 
-# --- Build the plugin ---
-BUILD_DIR="$EXT_DIR/dist-claude-plugin/$EXT_NAME"
+# --- Build the plugin (output goes to <ext>/dist-claude-plugin/<name>) ---
+BUILD_PARENT="$EXT_DIR/dist-claude-plugin"
+BUILD_DIR="$BUILD_PARENT/$EXT_NAME"
 bash "$REPO_DIR/scripts/build-claude-plugin.sh" "$EXT_DIR" "$BUILD_DIR"
 
-# --- Install ---
-mkdir -p "$CLAUDE_PLUGINS"
-TARGET="$CLAUDE_PLUGINS/$EXT_NAME"
+# --- Generate marketplace.json so Claude Code can discover the plugin ---
+MARKETPLACE_NAME="$(basename "$REPO_DIR")-local"
+MARKETPLACE_DIR="$BUILD_PARENT/.claude-plugin"
+mkdir -p "$MARKETPLACE_DIR"
 
-if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
-  rm -rf "$TARGET"
+DESCRIPTION=$(jq -r '.description // ""' "$EXT_DIR/extension.json" 2>/dev/null \
+  || jq -r '.description // ""' "$EXT_DIR/gemini-extension.json" 2>/dev/null \
+  || echo "")
+AUTHOR_NAME=$(jq -r '.claude.author.name // .author.name // "Unknown"' "$EXT_DIR/extension.json" 2>/dev/null || echo "Unknown")
+
+# Build the marketplace manifest. If a marketplace.json already exists for
+# this build parent, merge the new plugin entry in; otherwise create from
+# scratch. This lets multiple extensions share a single local marketplace
+# when their build outputs are placed under the same parent directory
+# (not the current default, but supported).
+EXISTING_PLUGINS="[]"
+if [ -f "$MARKETPLACE_DIR/marketplace.json" ]; then
+  EXISTING_PLUGINS=$(jq --arg n "$EXT_NAME" '[.plugins[] | select(.name != $n)]' \
+    "$MARKETPLACE_DIR/marketplace.json")
 fi
 
-if [ "$LINK_MODE" = true ]; then
-  # --- Security disclaimer for link mode ---
-  echo ""
-  echo "WARNING: You are using symlink mode for a Claude Code plugin."
-  echo "Plugin files will change when you switch branches in this repository."
-  echo "A malicious branch could alter the plugin's behavior."
-  echo ""
-  echo "Only use this mode if you TRUST ALL branches in this repository."
-  echo "For production use, prefer copy mode (the default)."
-  echo ""
-  read -p "Continue with symlink mode? [y/N] " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborted. Use copy mode instead (omit --link)."
-    exit 1
-  fi
+jq -n \
+  --arg market_name "$MARKETPLACE_NAME" \
+  --arg name "$EXT_NAME" \
+  --arg description "$DESCRIPTION" \
+  --arg author "$AUTHOR_NAME" \
+  --argjson existing "$EXISTING_PLUGINS" \
+  '{
+    name: $market_name,
+    owner: { name: "gemini-configuration contributors" },
+    plugins: ($existing + [{
+      name: $name,
+      description: $description,
+      author: { name: $author },
+      source: ("./" + $name)
+    }])
+  }' > "$MARKETPLACE_DIR/marketplace.json"
+echo "  Generated marketplace manifest: $MARKETPLACE_NAME"
 
-  ln -s "$BUILD_DIR" "$TARGET"
-  echo "Linked: $BUILD_DIR -> $TARGET"
-else
-  cp -r "$BUILD_DIR" "$TARGET"
-  echo "Copied: $BUILD_DIR -> $TARGET"
-fi
+# --- Register marketplace + install plugin (both idempotent) ---
+claude plugin marketplace add "$BUILD_PARENT" --scope user
+claude plugin install "$EXT_NAME@$MARKETPLACE_NAME" --scope user
 
 echo ""
-echo "Plugin installed: $TARGET"
-echo "Restart Claude Code or run /reload-plugins to pick up changes."
+echo "Plugin installed via marketplace '$MARKETPLACE_NAME'."
+echo "Verify with: claude plugin list"
+echo "Restart Claude Code to pick up the plugin."
