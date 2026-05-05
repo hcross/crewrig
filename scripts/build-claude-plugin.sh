@@ -65,6 +65,18 @@ if [ "$MCP_SERVERS" != "{}" ]; then
     { mcpServers: walk(if type == "string" then gsub("\\$\\{extensionPath\\}"; $path) else . end) }
   ' > "$OUTPUT_DIR/.mcp.json"
   echo "  Generated: .mcp.json"
+
+  # The .mcp.json typically references ${extensionPath}/dist/index.js — copy
+  # the compiled MCP server so the resolved path inside the plugin is valid.
+  # package.json is also needed for ESM type resolution by node at runtime.
+  if [ -d "$EXT_DIR/dist" ]; then
+    cp -r "$EXT_DIR/dist" "$OUTPUT_DIR/dist"
+    echo "  Copied: dist/"
+  fi
+  if [ -f "$EXT_DIR/package.json" ]; then
+    cp "$EXT_DIR/package.json" "$OUTPUT_DIR/package.json"
+    echo "  Copied: package.json"
+  fi
 fi
 
 # --- Copy context file ---
