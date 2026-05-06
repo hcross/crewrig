@@ -66,7 +66,7 @@ jq -n \
   --argjson existing "$EXISTING_PLUGINS" \
   '{
     name: $market_name,
-    owner: { name: "gemini-configuration contributors" },
+    owner: { name: "crewrig contributors" },
     plugins: ($existing + [{
       name: $name,
       description: $description,
