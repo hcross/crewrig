@@ -90,38 +90,44 @@ if [ -n "$MODEL_RESPONSE" ] && [ "$MODEL_RESPONSE" != "null" ] && [ -z "$CONTENT
   CONTENT="[AGENT] ${MODEL_RESPONSE:0:2000}"
 fi
 
-# --- Persist to MemPalace ---
+# --- Persist to MemPalace via the v3.3.x tool_add_drawer wrapper ---
 if [ -n "$CONTENT" ]; then
-  "$MEMPALACE_PYTHON" -c "
-import sys
-sys.path.insert(0, '')
-from mempalace.mcp_server import *
-# Use add_drawer via CLI instead
-" 2>/dev/null || true
+  # Pass content + room via env vars to avoid heredoc/quoting fragility.
+  # Truncate content to 4000 chars to keep drawer size bounded.
+  TRANSCRIPT_CONTENT="$(printf '%s' "$CONTENT" | head -c 4000)"
+  TRANSCRIPT_ROOM="$ROOM_ID"
+  TRANSCRIPT_AGENT="transcript-hook"
 
-  # Use mempalace CLI search as a smoke test, then add via Python
-  "$MEMPALACE_PYTHON" -c "
-import json, sys
+  STATUS=$(
+    TRANSCRIPT_CONTENT="$TRANSCRIPT_CONTENT" \
+    TRANSCRIPT_ROOM="$TRANSCRIPT_ROOM" \
+    TRANSCRIPT_AGENT="$TRANSCRIPT_AGENT" \
+    "$MEMPALACE_PYTHON" - 2>&1 <<'PYEOF'
+import os, sys
 try:
-    from mempalace.palace_graph import PalaceGraph
-    from pathlib import Path
-    import os
+    from mempalace.mcp_server import tool_add_drawer
+except ImportError as e:
+    print(f"IMPORT_ERROR: {e}", file=sys.stderr)
+    sys.exit(2)
 
-    palace_dir = os.environ.get('MEMPALACE_PALACE', os.path.expanduser('~/.mempalace/palace'))
-    pg = PalaceGraph(Path(palace_dir))
-
-    wing = 'transcripts'
-    room = '${ROOM_ID}'
-    content = json.loads(sys.stdin.read())
-
-    pg.add_drawer(wing=wing, room=room, content=content['text'])
-except Exception as e:
-    print(f'mempalace-transcript: {e}', file=sys.stderr)
-" <<PYEOF
-{"text": "$(echo "$CONTENT" | sed 's/"/\\"/g' | head -c 4000)"}
+result = tool_add_drawer(
+    wing="transcripts",
+    room=os.environ["TRANSCRIPT_ROOM"],
+    content=os.environ["TRANSCRIPT_CONTENT"],
+    added_by=os.environ["TRANSCRIPT_AGENT"],
+)
+if not result.get("success"):
+    print(f"ADD_FAILED: {result.get('error', 'unknown')}", file=sys.stderr)
+    sys.exit(3)
+print("OK")
 PYEOF
-
-  echo "mempalace-transcript: persisted ${ENTRY_TYPE} to transcripts/${ROOM_ID}" >&2
+  )
+  STATUS_RC=$?
+  if [ "$STATUS_RC" -eq 0 ]; then
+    echo "mempalace-transcript: persisted ${ENTRY_TYPE} to transcripts/${ROOM_ID}" >&2
+  else
+    echo "mempalace-transcript: FAILED to persist ${ENTRY_TYPE} (rc=$STATUS_RC): $STATUS" >&2
+  fi
 fi
 
 exit 0
