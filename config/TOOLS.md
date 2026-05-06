@@ -88,7 +88,7 @@ MemPalace
 │   └── room: expertise                  # Domains of knowledge
 │
 └── wing: transcripts                    # Session recordings (if enabled)
-    └── room: <tool>-<date>-<session-id> # EXCLUDED from default sweep
+    └── room: <project>-<date>-<sid>     # EXCLUDED from default sweep
 ```
 
 - **Wings**: Top-level grouping. One per project, one per agent (auto-created
