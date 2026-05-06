@@ -5,7 +5,10 @@
       "Bash(task:*)",
       "Bash(npm:*)",
       "Bash(npx:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)"
     ]
   }
 }
