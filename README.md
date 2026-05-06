@@ -1,4 +1,4 @@
-# AI Agent Configuration
+# CrewRig
 
 Centralized configuration framework for
 [Gemini CLI](https://github.com/google-gemini/gemini-cli) and
@@ -87,8 +87,8 @@ See `config/TOOLS.md` for the full memory protocol.
 ### Gemini CLI
 
 ```bash
-git clone git@github.com:hcross/gemini-configuration.git
-cd gemini-configuration
+git clone git@github.com:hcross/crewrig.git
+cd crewrig
 
 # Generate your personal profile
 gemini "/init-personal-profile"
@@ -103,8 +103,8 @@ task setup-gemini-interactive
 ### Claude Code
 
 ```bash
-git clone git@github.com:hcross/gemini-configuration.git
-cd gemini-configuration
+git clone git@github.com:hcross/crewrig.git
+cd crewrig
 
 # Generate your personal profile
 claude /init-personal-profile
@@ -256,7 +256,7 @@ DEVELOPMENT.md                        # Extension development guide
 
 | Date | Event | Title | Links |
 |------|-------|-------|-------|
-| 2026-03-17 | GDG Cloud Paris | L'IA ne fera rien sans nous | [README](communication/talks/gdg-cloud-paris-2026-03-17/README.md) · [Slides](https://hcross.github.io/gemini-configuration/talks/gdg-cloud-paris-2026-03-17/) |
+| 2026-03-17 | GDG Cloud Paris | L'IA ne fera rien sans nous | [README](communication/talks/gdg-cloud-paris-2026-03-17/README.md) · [Slides](https://hcross.github.io/crewrig/talks/gdg-cloud-paris-2026-03-17/) |
 
 ## MCP Servers
 

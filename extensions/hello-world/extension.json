@@ -34,7 +34,7 @@
   },
   "claude": {
     "author": {
-      "name": "gemini-configuration contributors"
+      "name": "crewrig contributors"
     },
     "contextFileName": "CLAUDE.md",
     "skills": ["skills/*/SKILL.md"],

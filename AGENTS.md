@@ -1,4 +1,4 @@
-# Agent Working Rules
+# CrewRig — Agent Working Rules
 
 This document defines the rules and conventions that all agents (human or AI) must follow when contributing to this project.
 
