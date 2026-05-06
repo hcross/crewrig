@@ -1,7 +1,11 @@
 # Extension Development Guide
 
 This document covers the full lifecycle of creating, developing, testing,
-and releasing extensions in this monorepo.
+and releasing extensions in this monorepo. Extensions work with both
+**Gemini CLI** (as extensions) and **Claude Code** (as plugins) from a
+single `extension.json` manifest. See
+[`extension-skeleton/EXTENSION-FORMAT.md`](extension-skeleton/EXTENSION-FORMAT.md)
+for the complete manifest specification.
 
 ## Creating a New Extension
 
@@ -36,7 +40,9 @@ The `extension-skeleton/` directory contains the template source:
 extension-skeleton/
 ├── .geminiignore                          # Prevents Gemini from loading templates
 ├── base/                                  # Always copied
-│   ├── gemini-extension.json              # Manifest (name, version, context)
+│   ├── extension.json                     # Unified manifest (all tools)
+│   ├── gemini-extension.json              # Legacy Gemini-only manifest
+│   ├── CLAUDE.md                          # Claude Code context placeholder
 │   ├── package.json                       # npm package with MCP SDK dependency
 │   ├── tsconfig.json                      # TypeScript ES2022 / Node16
 │   ├── GEMINI.md                          # Agent context placeholder
@@ -71,12 +77,25 @@ npm install
 During development, use symlinks so changes take effect immediately
 without reinstalling:
 
+**Gemini CLI:**
+
 ```bash
 task link-extensions
 ```
 
 Start a Gemini session and your extension is loaded. Edit source files,
 rebuild with `npm run build`, and restart Gemini to pick up changes.
+
+**Claude Code:**
+
+```bash
+task build-claude-plugin EXT=my-extension
+claude --plugin-dir extensions/my-extension/dist-claude-plugin/my-extension
+```
+
+The `--plugin-dir` flag loads the plugin directly for development.
+Run `/reload-plugins` after changes to pick up updates without
+restarting.
 
 ### Testing Locally
 
@@ -143,10 +162,12 @@ The `.tgz` files are written to `dist/`.
 
 ```text
 extensions/my-extension/
-├── gemini-extension.json   # Manifest (name, version, MCP server config)
+├── extension.json          # Unified manifest (generates Gemini ext + Claude plugin)
+├── gemini-extension.json   # Legacy Gemini-only manifest (optional)
 ├── package.json            # npm package (dependencies, build script)
 ├── tsconfig.json           # TypeScript configuration
-├── GEMINI.md               # Agent context when extension is loaded
+├── GEMINI.md               # Agent context for Gemini CLI
+├── CLAUDE.md               # Agent context for Claude Code
 ├── README.md               # Documentation
 ├── src/                    # MCP server source (TypeScript)
 │   └── index.ts

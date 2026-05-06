@@ -1,0 +1,133 @@
+#!/bin/bash
+# mempalace-transcript.sh — Shared session transcript hook for Gemini CLI and Claude Code
+#
+# Persists session exchanges (user prompts, tool usage, agent responses) to
+# MemPalace's "transcripts" wing. Called by tool-specific hook registrations.
+#
+# Input: JSON on stdin (hook event data from Gemini CLI or Claude Code)
+# Output: none (all logging to stderr, stdout reserved for hook JSON response)
+#
+# Environment:
+#   MEMPALACE_TRANSCRIPT_ENABLED - set to "1" to enable (default: disabled)
+#   MEMPALACE_PYTHON             - Python binary with mempalace installed
+#                                  (default: python3)
+#   GEMINI_SESSION_ID / CLAUDE_SESSION_ID - session identifier
+#   GEMINI_PROJECT_DIR / CLAUDE_PROJECT_DIR - project directory
+#
+# Requires: jq, mempalace (Python package)
+
+set -euo pipefail
+
+# --- Guard: opt-in only ---
+if [ "${MEMPALACE_TRANSCRIPT_ENABLED:-0}" != "1" ]; then
+  exit 0
+fi
+
+# --- Dependencies ---
+command -v jq >/dev/null 2>&1 || { echo "mempalace-transcript: jq required" >&2; exit 0; }
+
+MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-python3}"
+
+# --- Read input ---
+INPUT=$(cat)
+
+# --- Detect tool and session ---
+SESSION_ID="${GEMINI_SESSION_ID:-${CLAUDE_SESSION_ID:-unknown}}"
+PROJECT_DIR="${GEMINI_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
+PROJECT_NAME=$(basename "$PROJECT_DIR")
+TODAY=$(date +%Y-%m-%d)
+ROOM_ID="${PROJECT_NAME}-${TODAY}-${SESSION_ID:0:8}"
+
+# --- Detect event type from input fields ---
+HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
+TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input // empty' 2>/dev/null)
+
+# --- Determine content based on available fields ---
+CONTENT=""
+ENTRY_TYPE=""
+
+# User prompt (Claude Code: UserPromptSubmit)
+PROMPT=$(echo "$INPUT" | jq -r '.prompt // empty' 2>/dev/null)
+if [ -n "$PROMPT" ] && [ "$PROMPT" != "null" ]; then
+  ENTRY_TYPE="user-prompt"
+  CONTENT="[USER] $PROMPT"
+fi
+
+# Tool usage (Claude Code: PostToolUse / Gemini: AfterTool)
+if [ -n "$TOOL_NAME" ] && [ "$TOOL_NAME" != "null" ] && [ -z "$CONTENT" ]; then
+  ENTRY_TYPE="tool-use"
+  TOOL_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // .tool_input.file_path // .tool_input.pattern // "(no args)"' 2>/dev/null)
+  CONTENT="[TOOL] ${TOOL_NAME}: ${TOOL_CMD}"
+fi
+
+# Agent response / stop (Claude Code: Stop)
+STOP_REASON=$(echo "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null)
+if [ "$HOOK_EVENT" = "Stop" ] && [ -z "$CONTENT" ]; then
+  ENTRY_TYPE="agent-response"
+  CONTENT="[AGENT] Session turn completed"
+fi
+
+# Session lifecycle (SessionStart / SessionEnd)
+SOURCE=$(echo "$INPUT" | jq -r '.source // empty' 2>/dev/null)
+if [ "$HOOK_EVENT" = "SessionStart" ] || [ "$HOOK_EVENT" = "SessionEnd" ]; then
+  ENTRY_TYPE="session-lifecycle"
+  CONTENT="[SESSION] ${HOOK_EVENT}: ${SOURCE:-unknown}"
+fi
+
+# Gemini-specific: BeforeAgent (user prompt equivalent)
+USER_INPUT=$(echo "$INPUT" | jq -r '.user_input // .userInput // empty' 2>/dev/null)
+if [ -n "$USER_INPUT" ] && [ "$USER_INPUT" != "null" ] && [ -z "$CONTENT" ]; then
+  ENTRY_TYPE="user-prompt"
+  CONTENT="[USER] $USER_INPUT"
+fi
+
+# Gemini-specific: AfterModel (agent response equivalent)
+MODEL_RESPONSE=$(echo "$INPUT" | jq -r '.model_response // .modelResponse // empty' 2>/dev/null)
+if [ -n "$MODEL_RESPONSE" ] && [ "$MODEL_RESPONSE" != "null" ] && [ -z "$CONTENT" ]; then
+  ENTRY_TYPE="agent-response"
+  # Truncate long responses to avoid oversized drawers
+  CONTENT="[AGENT] ${MODEL_RESPONSE:0:2000}"
+fi
+
+# --- Persist to MemPalace via the v3.3.x tool_add_drawer wrapper ---
+if [ -n "$CONTENT" ]; then
+  # Pass content + room via env vars to avoid heredoc/quoting fragility.
+  # Truncate content to 4000 chars to keep drawer size bounded.
+  TRANSCRIPT_CONTENT="$(printf '%s' "$CONTENT" | head -c 4000)"
+  TRANSCRIPT_ROOM="$ROOM_ID"
+  TRANSCRIPT_AGENT="transcript-hook"
+
+  STATUS=$(
+    TRANSCRIPT_CONTENT="$TRANSCRIPT_CONTENT" \
+    TRANSCRIPT_ROOM="$TRANSCRIPT_ROOM" \
+    TRANSCRIPT_AGENT="$TRANSCRIPT_AGENT" \
+    "$MEMPALACE_PYTHON" - 2>&1 <<'PYEOF'
+import os, sys
+try:
+    from mempalace.mcp_server import tool_add_drawer
+except ImportError as e:
+    print(f"IMPORT_ERROR: {e}", file=sys.stderr)
+    sys.exit(2)
+
+result = tool_add_drawer(
+    wing="transcripts",
+    room=os.environ["TRANSCRIPT_ROOM"],
+    content=os.environ["TRANSCRIPT_CONTENT"],
+    added_by=os.environ["TRANSCRIPT_AGENT"],
+)
+if not result.get("success"):
+    print(f"ADD_FAILED: {result.get('error', 'unknown')}", file=sys.stderr)
+    sys.exit(3)
+print("OK")
+PYEOF
+  )
+  STATUS_RC=$?
+  if [ "$STATUS_RC" -eq 0 ]; then
+    echo "mempalace-transcript: persisted ${ENTRY_TYPE} to transcripts/${ROOM_ID}" >&2
+  else
+    echo "mempalace-transcript: FAILED to persist ${ENTRY_TYPE} (rc=$STATUS_RC): $STATUS" >&2
+  fi
+fi
+
+exit 0

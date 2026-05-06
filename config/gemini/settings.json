@@ -33,18 +33,11 @@
         "Authorization": "Bearer $GITHUB_PAT"
       }
     },
-    "memory": {
-      "command": "npx",
+    "mempalace": {
+      "command": "python3",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
-    "deep-memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@basicmachines-co/basic-memory"
+        "-m",
+        "mempalace.mcp_server"
       ]
     },
     "sequentialthinking": {

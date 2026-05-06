@@ -91,7 +91,10 @@ case "$TYPE" in
           break
         fi
       done
-      [ -z "$FOUND" ] && echo "Error: '$NAME' not found in community-config/$TYPE" && exit 1
+      if [ -z "$FOUND" ]; then
+        echo "Error: '$NAME' not found in community-config/$TYPE"
+        exit 1
+      fi
     else
       for item in "$SRC_DIR"/*; do
         [ -e "$item" ] && place_component "$item" "$DEST"

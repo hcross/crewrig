@@ -1,4 +1,4 @@
-# Organization Context for Gemini CLI
+# Organization Context
 
 You assist members of **[Organization Name]**.
 
@@ -6,7 +6,7 @@ You assist members of **[Organization Name]**.
 
 **[Organization Name]** builds and maintains digital products with a focus on
 reliability, user experience, and sustainable engineering practices. This
-shared configuration repository centralizes Gemini CLI settings across all
+shared configuration repository centralizes AI assistant settings across all
 teams.
 
 ## Code Quality

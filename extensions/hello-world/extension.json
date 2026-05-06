@@ -1,0 +1,49 @@
+{
+  "name": "hello-world",
+  "version": "0.1.0",
+  "description": "Demonstration extension showcasing MCP tools, commands, skills, and context.",
+  "mcpServers": {
+    "default": {
+      "command": "node",
+      "args": ["${extensionPath}/dist/index.js"]
+    }
+  },
+  "components": {
+    "commands": {
+      "enabled": true,
+      "location": "commands/",
+      "convertToSkills": true
+    },
+    "skills": {
+      "enabled": true,
+      "location": "skills/"
+    },
+    "agents": {
+      "enabled": false,
+      "location": "agents/"
+    },
+    "hooks": {
+      "enabled": false,
+      "location": "hooks/"
+    }
+  },
+  "gemini": {
+    "contextFileName": "GEMINI.md",
+    "themes": [],
+    "hooks": []
+  },
+  "claude": {
+    "author": {
+      "name": "gemini-configuration contributors"
+    },
+    "contextFileName": "CLAUDE.md",
+    "skills": ["skills/*/SKILL.md"],
+    "agents": [],
+    "rules": [],
+    "hooks": {},
+    "defaultAllowedTools": ["Read", "Write", "Edit", "Bash"],
+    "settings": {},
+    "lsp": {},
+    "bin": null
+  }
+}

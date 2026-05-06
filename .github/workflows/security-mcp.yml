@@ -6,6 +6,9 @@ on:
     paths:
       - "**/package.json"
       - "**/settings.json"
+      - "**/mcp.json"
+      - "**/mcp.json.template"
+      - "**/extension.json"
 
 jobs:
   audit:
@@ -21,5 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # audit-level intentionally set to `critical` (was `high`, see commit
+      # 9f05139). Direct dependency vulnerabilities are pinned via npm
+      # `overrides` in package.json (picomatch ^4.0.4, brace-expansion ^2.0.3).
+      # The remaining moderate/high findings are inside npm's bundled
+      # node_modules (picomatch@4.0.3, brace-expansion@5.0.4) — out of our
+      # control until upstream bumps. Drop back to `high` once npm itself
+      # ships fixed bundled deps.
       - name: Run security audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
