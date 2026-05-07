@@ -10,11 +10,13 @@
 #   --project  Prune only a specific project's transcripts (default: all)
 #
 # Environment:
-#   MEMPALACE_PYTHON - Python binary with mempalace installed (default: python3)
+#   MEMPALACE_PYTHON - Python binary with mempalace installed
+#                     (auto-detected from pipx if not set, falls back to python3)
 #
-# This script operates via the MemPalace MCP surface (tool_list_drawers,
-# tool_delete_drawer), NOT the CLI binary. Per the MCP-only access rule in
-# config/TOOLS.md, agents must use the MCP tools for all MemPalace operations.
+# This script uses the same in-process `mempalace.mcp_server` Python entry points
+# as the transcript hook, deliberately bypassing the MCP server because:
+#   (a) it runs as a maintenance script outside the agent's MCP session, and
+#   (b) the operations are admin-flavored (bulk delete) rather than agent-flavored.
 #
 # Transcript room format: <project>-<date>-<sid>
 # This format allows date-based filtering. Rooms older than --days are deleted.
@@ -48,10 +50,18 @@ while [[ $# -gt 0 ]]; do
       echo "  --days     Retention period in days (default: 30)"
       echo "  --apply    Actually delete drawers (dry-run mode by default)"
       echo "  --project  Prune only a specific project's transcripts (default: all)"
+      echo ""
+      echo "Prerequisites:"
+      echo "  MemPalace must be installed via pipx (recommended):"
+      echo "    pipx install 'mempalace>=3.3.3,<3.4'"
+      echo ""
+      echo "  If you installed via pip to a custom venv, set MEMPALACE_PYTHON:"
+      echo "    MEMPALACE_PYTHON=/path/to/venv/bin/python $0 ..."
       exit 0
       ;;
     *)
       echo "Unknown option: $1" >&2
+      echo "Run '$0 --help' for usage." >&2
       exit 1
       ;;
   esac
@@ -70,11 +80,25 @@ if [ "$DAYS" -lt 1 ]; then
   exit 1
 fi
 
-# --- Dependencies ---
-MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-python3}"
+# --- Dependencies: auto-detect pipx venv or fall back to python3 ---
+auto_detect_mempalace_python() {
+  if command -v pipx >/dev/null 2>&1; then
+    local pipx_venv
+    pipx_venv=$(pipx environment --value PIPX_HOME 2>/dev/null)/venvs/mempalace
+    if [ -d "$pipx_venv" ]; then
+      echo "$pipx_venv/bin/python3"
+      return 0
+    fi
+  fi
+  echo "python3"
+  return 1
+}
+
+MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-$(auto_detect_mempalace_python)}"
 
 command -v "$MEMPALACE_PYTHON" >/dev/null 2>&1 || {
   echo "Error: $MEMPALACE_PYTHON not found" >&2
+  echo "Install MemPalace via pipx: pipx install 'mempalace>=3.3.3,<3.4'" >&2
   exit 1
 }
 
@@ -91,20 +115,23 @@ echo "Dry run:     $DRY_RUN"
 [ -n "$PROJECT_FILTER" ] && echo "Project:      $PROJECT_FILTER (filter only)"
 echo ""
 
-# List and potentially delete drawers via MCP
-OUTPUT=$(
+# Execute Python directly (no capture, let streams pass through)
+exec env \
   TRANSCRIPTS_WING="$TRANSCRIPTS_WING" \
   PROJECT_FILTER="$PROJECT_FILTER" \
   CUTOFF_DATE="$CUTOFF_DATE" \
   DRY_RUN="$DRY_RUN" \
-  "$MEMPALACE_PYTHON" - 2>&1 <<PYEOF
-import os, sys
+  "$MEMPALACE_PYTHON" - <<'PYEOF'
+import os
+import re
+import sys
 from datetime import datetime
 
 try:
     from mempalace.mcp_server import tool_list_drawers, tool_delete_drawer
 except ImportError as e:
-    print(f"IMPORT_ERROR: {e}", file=sys.stderr)
+    print(f"Error: Failed to import mempalace: {e}", file=sys.stderr)
+    print(f"  Ensure MemPalace is installed: pipx install 'mempalace>=3.3.3,<3.4'", file=sys.stderr)
     sys.exit(2)
 
 wing = os.environ["TRANSCRIPTS_WING"]
@@ -116,63 +143,108 @@ dry_run = os.environ["DRY_RUN"].lower() == "true"
 try:
     cutoff_dt = datetime.strptime(cutoff_date, "%Y-%m-%d")
 except ValueError:
-    print(f"ERROR: Invalid cutoff date format: {cutoff_date}", file=sys.stderr)
+    print(f"Error: Invalid cutoff date format: {cutoff_date}", file=sys.stderr)
     sys.exit(2)
 
-# List all drawers in transcripts wing
-list_result = tool_list_drawers(wing=wing)
+# Pagination configuration
+PAGE_SIZE = 100
+MAX_TOTAL_DRAWERS = 50000  # Safety cap to avoid runaway
+total_drawers_seen = 0
+offset = 0
 
-if not list_result.get("success"):
-    print(f"LIST_FAILED: {list_result.get('error', 'unknown')}", file=sys.stderr)
-    sys.exit(3)
+# Track statistics
+stats = {
+    "total_scanned": 0,
+    "skipped_format": 0,
+    "skipped_filter": 0,
+    "aged_out": 0,
+    "eligible_deletion": 0,
+}
 
-drawers = list_result.get("drawers", [])
-print(f"Found {len(drawers)} drawer(s) in wing '{wing}'")
-
+# List drawers with pagination
 to_delete = []
-for drawer in drawers:
-    drawer_id = drawer.get("drawer_id")
-    room = drawer.get("room")
+
+while total_drawers_seen < MAX_TOTAL_DRAWERS:
+    list_result = tool_list_drawers(wing=wing, limit=PAGE_SIZE, offset=offset)
     
-    # Extract date from room format: <project>-<date>-<sid>
-    # Skip if room format doesn't match
-    if not room:
-        continue
+    # tool_list_drawers returns {drawers, count, offset, limit} — no 'success' key
+    drawers = list_result.get("drawers", [])
+    count = list_result.get("count", 0)
     
-    # Parse room name to extract project and date
-    parts = room.split("-")
-    if len(parts) < 2:
-        continue
+    if not drawers:
+        break
     
-    # Last 8 chars are session ID prefix, rest is project-date
-    # Format: <project>-<date>-<sid>
-    # Reconstruct: join all but last, then split last from date
-    date_part = parts[-2] if len(parts) >= 2 else parts[-1]
-    project_name = "-".join(parts[:-2]) if len(parts) > 2 else parts[0]
+    total_drawers_seen += len(drawers)
     
-    # Parse date part (expects YYYY-MM-DD)
-    try:
-        date_part_full = date_part
-        if date_part_part := [date_part[i:i+2] for i in range(0, len(date_part), 2)]:
+    for drawer in drawers:
+        stats["total_scanned"] += 1
+        drawer_id = drawer.get("drawer_id")
+        room = drawer.get("room")
+        
+        # Skip if room format doesn't exist
+        if not room:
+            stats["skipped_format"] += 1
+            continue
+        
+        # Parse room name with regex: <project>-<date>-<sid>
+        # Date format is YYYY-MM-DD (contains hyphens)
+        # Session ID is 8 hex chars
+        match = re.match(
+            r"^(?P<project>.+)-(?P<date>\d{4}-\d{2}-\d{2})-(?P<sid>[a-f0-9]{8})$",
+            room
+        )
+        
+        if not match:
+            stats["skipped_format"] += 1
+            continue
+        
+        project_name = match.group("project")
+        date_str = match.group("date")
+        
+        # Apply project filter if set
+        if project_filter and project_name != project_filter:
+            stats["skipped_filter"] += 1
+            continue
+        
+        # Parse date string
+        try:
+            drawer_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            stats["skipped_format"] += 1
+            continue
+        
+        # Check if drawer is older than cutoff
+        if drawer_dt < cutoff_dt:
+            stats["aged_out"] += 1
+            to_delete.append((drawer_id, room, drawer_dt))
+        else:
+            # Drawer is still within retention period
             pass
-        drawer_dt = datetime.strptime(date_part, "%Y-%m-%d")
-    except ValueError:
-        # Skip rooms that don't match expected date format
-        continue
     
-    # Apply project filter if set
-    if project_filter and project_name != project_filter:
-        continue
+    # Check if we've processed all drawers
+    if count <= offset + len(drawers):
+        break
     
-    # Check if drawer is older than cutoff
-    if drawer_dt < cutoff_dt:
-        to_delete.append((drawer_id, room, drawer_dt))
+    offset += PAGE_SIZE
+
+print(f"Scanned: {stats['total_scanned']} drawer(s)")
+print(f"Format mismatch: {stats['skipped_format']}")
+if project_filter:
+    print(f"Filtered by project: {stats['skipped_filter']}")
+print(f"Aged out (older than {cutoff_date}): {stats['aged_out']}")
+print(f"Eligible for deletion: {len(to_delete)}")
+print()
+
+# Escalate if all drawers were skipped due to format mismatch
+if stats["total_scanned"] > 0 and stats["skipped_format"] == stats["total_scanned"]:
+    print("Error: All scanned drawers failed room-name format validation.", file=sys.stderr)
+    print("  This suggests the wing contains rooms not matching <project>-<date>-<sid>.", file=sys.stderr)
+    print("  If you renamed or changed the transcript room format, this script needs updates.", file=sys.stderr)
+    sys.exit(3)
 
 if not to_delete:
     print("No drawers to delete.")
     sys.exit(0)
-
-print(f"Candidate for deletion: {len(to_delete)} drawer(s) older than {cutoff_date}")
 
 if dry_run:
     print("DRY RUN - would delete:")
@@ -183,20 +255,17 @@ else:
     failed_count = 0
     for drawer_id, room, drawer_dt in to_delete:
         delete_result = tool_delete_drawer(drawer_id=drawer_id)
+        # tool_delete_drawer *does* return {success, error}
         if delete_result.get("success"):
             print(f"Deleted: {room} (id={drawer_id}, date={drawer_dt.strftime('%Y-%m-%d')})")
             deleted_count += 1
         else:
-            print(f"FAILED to delete {room} (id={drawer_id}): {delete_result.get('error', 'unknown')}", file=sys.stderr)
+            print(f"Failed to delete {room} (id={drawer_id}): {delete_result.get('error', 'unknown')}", file=sys.stderr)
             failed_count += 1
     
+    print()
     print(f"Deleted: {deleted_count} drawer(s)")
     if failed_count > 0:
-        print(f"FAILED: {failed_count} drawer(s)", file=sys.stderr)
+        print(f"Failed: {failed_count} drawer(s)", file=sys.stderr)
         sys.exit(4)
 PYEOF
-)
-
-EXIT_CODE=$?
-echo "$OUTPUT"
-exit $EXIT_CODE
