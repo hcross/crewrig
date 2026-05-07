@@ -15,8 +15,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Flag chained-test exit pattern under set -e
-        # Catches: `[ test ] && cmd && exit N` and `[[ test ]] && cmd && exit N`
-        # See docs/scripting-conventions.md, Rule 3.
+        # One-shot recursive grep — no surrounding loop. Targets `scripts/`
+        # and `hooks/` directly via `grep -r`. See docs/scripting-conventions.md,
+        # Rule 3.
+        #
+        # Regex breakdown (matches `[ test ] && cmd && exit N`
+        # and `[[ test ]] && cmd && exit N`):
+        #   \[\[?            opening `[` or `[[`
+        #   [^]]*            test body (anything except a closing `]`)
+        #   \]\]?            closing `]` or `]]`
+        #   [[:space:]]+&&   whitespace + first `&&`
+        #   .*&&             middle clause + second `&&`
+        #   [[:space:]]+exit[[:space:]]+[0-9]+   `exit N`
         run: |
           set -uo pipefail
           hits=$(grep -rnE '\[\[?[^]]*\]\]?[[:space:]]+&&[[:space:]]+.*&&[[:space:]]+exit[[:space:]]+[0-9]+' \

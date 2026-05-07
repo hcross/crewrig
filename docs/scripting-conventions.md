@@ -172,17 +172,27 @@ downstream check kept producing an actionable error.
 ### Bad
 
 ```python
-# Loop scans drawers, only checks the slice it saw
+# Pagination loop: imagine it terminates after the first page (broken
+# upstream — only 100 of 11 850 drawers scanned).
 for drawer in drawers_seen_so_far:
-    ...
-if all_drawers_failed_format(drawers_seen_so_far):
-    sys.exit(3)  # looks correct, says nothing about wing size
+    if not matches_format(drawer):
+        skipped_format += 1
+
+# This downstream check fires on the partial sample and looks correct.
+# The user sees an actionable error message and concludes the script
+# worked. The 11 750 unscanned drawers stay invisible — the wedge
+# upstream is hidden because the downstream check refused to look past
+# the slice it was handed.
+if skipped_format == len(drawers_seen_so_far):
+    sys.exit(3)  # silent on input size — silent on the wedge
 ```
 
 ### Good
 
 ```python
-# Surface what was actually scanned, so a wedge upstream is visible
+# Surface what was actually scanned, so a wedge upstream is visible.
+# A reviewer comparing "Scanned: 100" against an expected wing size of
+# ~10 000 catches the upstream pagination bug at a glance.
 print(f"Scanned: {stats['total_scanned']} drawer(s)")
 print(f"Format mismatch: {stats['skipped_format']}")
 if stats["skipped_format"] == stats["total_scanned"] > 0:
