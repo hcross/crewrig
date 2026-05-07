@@ -170,3 +170,9 @@ tasks:
       - sh: command -v markdownlint >/dev/null 2>&1
         msg: "markdownlint-cli is required. Install with: npm install -g markdownlint-cli"
     cmd: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton --fix
+
+  # --- Transcript Management ---
+
+  prune-transcripts:
+    desc: "Prune old transcripts from MemPalace (task prune-transcripts -- --days 30 [--apply])"
+    cmd: bash {{.REPO_DIR}}/scripts/prune-transcripts.sh {{.CLI_ARGS}}
