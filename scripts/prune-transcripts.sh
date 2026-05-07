@@ -131,7 +131,7 @@ try:
     from mempalace.mcp_server import tool_list_drawers, tool_delete_drawer
 except ImportError as e:
     print(f"Error: Failed to import mempalace: {e}", file=sys.stderr)
-    print(f"  Ensure MemPalace is installed: pipx install 'mempalace>=3.3.3,<3.4'", file=sys.stderr)
+    print("  Ensure MemPalace is installed: pipx install 'mempalace>=3.3.3,<3.4'", file=sys.stderr)
     sys.exit(2)
 
 wing = os.environ["TRANSCRIPTS_WING"]
@@ -158,7 +158,6 @@ stats = {
     "skipped_format": 0,
     "skipped_filter": 0,
     "aged_out": 0,
-    "eligible_deletion": 0,
 }
 
 # List drawers with pagination
@@ -169,7 +168,6 @@ while total_drawers_seen < MAX_TOTAL_DRAWERS:
     
     # tool_list_drawers returns {drawers, count, offset, limit} — no 'success' key
     drawers = list_result.get("drawers", [])
-    count = list_result.get("count", 0)
     
     if not drawers:
         break
@@ -217,12 +215,9 @@ while total_drawers_seen < MAX_TOTAL_DRAWERS:
         if drawer_dt < cutoff_dt:
             stats["aged_out"] += 1
             to_delete.append((drawer_id, room, drawer_dt))
-        else:
-            # Drawer is still within retention period
-            pass
     
     # Check if we've processed all drawers
-    if count <= offset + len(drawers):
+    if len(drawers) < PAGE_SIZE:
         break
     
     offset += PAGE_SIZE
