@@ -108,7 +108,10 @@ case "$TYPE" in
 
     if [ -n "$NAME" ]; then
       JSON="$SRC_DIR/$NAME.json"
-      [ ! -f "$JSON" ] && echo "Error: '$NAME.json' not found in community-config/$TYPE" && exit 1
+      if [ ! -f "$JSON" ]; then
+        echo "Error: '$NAME.json' not found in community-config/$TYPE" >&2
+        exit 1
+      fi
       merge_json "$JSON" "$KEY"
     else
       for item in "$SRC_DIR"/*.json; do

@@ -1,0 +1,46 @@
+name: Scripting Conventions
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "hooks/**"
+      - ".github/workflows/scripting-conventions.yml"
+
+jobs:
+  grep-anti-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Flag chained-test exit pattern under set -e
+        # Catches: `[ test ] && cmd && exit N` and `[[ test ]] && cmd && exit N`
+        # See docs/scripting-conventions.md, Rule 3.
+        run: |
+          set -uo pipefail
+          hits=$(grep -rnE '\[\[?[^]]*\]\]?[[:space:]]+&&[[:space:]]+.*&&[[:space:]]+exit[[:space:]]+[0-9]+' \
+                  scripts/ hooks/ \
+                | grep -v 'acknowledged-exception:' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Rule 3 violation — chained-test exit pattern (see docs/scripting-conventions.md)"
+            echo "$hits"
+            exit 1
+          fi
+          echo "Rule 3 clean."
+
+      - name: Flag bare/broad except in shell-embedded Python
+        # Catches: `except:` and `except Exception:` and `except BaseException:`
+        # in heredoc'd Python inside shell scripts under scripts/ and hooks/.
+        # See docs/scripting-conventions.md, Rule 1.
+        run: |
+          set -uo pipefail
+          hits=$(grep -rnE 'except[[:space:]]*:|except[[:space:]]+(Exception|BaseException)[[:space:]]*(as[[:space:]]+\w+)?[[:space:]]*:' \
+                  scripts/ hooks/ \
+                | grep -v 'acknowledged-exception:' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Rule 1 violation — bare/broad except (see docs/scripting-conventions.md)"
+            echo "$hits"
+            exit 1
+          fi
+          echo "Rule 1 clean."

@@ -27,7 +27,9 @@ if [ "$MODE" = "link" ]; then
   echo "Only use if you trust all branches in this repository."
   read -p "Continue? [y/N] " -n 1 -r
   echo ""
-  [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
 fi
 
 # --- Normalize type ---
