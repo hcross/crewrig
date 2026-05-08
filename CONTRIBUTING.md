@@ -151,3 +151,6 @@ Each extension is an independent npm package with its own versioning. See
    build generates both tool outputs. See `community-config/FORMAT.md`.
 6. **Extensions**: use `extension.json` manifest for new extensions.
    See `extension-skeleton/EXTENSION-FORMAT.md`.
+7. **Shell + Python glue**: follow the rules in
+   [`docs/scripting-conventions.md`](docs/scripting-conventions.md). They
+   exist because each one has already shipped a real bug.

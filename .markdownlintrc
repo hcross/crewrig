@@ -1,6 +1,8 @@
 {
+  "_comment": "MD024 siblings_only lets docs repeat ### Why / ### Bad / ### Good under each rule in docs/scripting-conventions.md (and any future doc that uses the same recurring sub-section pattern). markdownlint ignores unknown top-level keys.",
   "default": true,
   "MD013": false,
+  "MD024": { "siblings_only": true },
   "MD034": false,
   "MD060": false
 }

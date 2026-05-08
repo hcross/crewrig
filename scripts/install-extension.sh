@@ -24,7 +24,10 @@ do_install() {
 }
 
 if [ -n "$EXT" ]; then
-  [ ! -d "$REPO_DIR/extensions/$EXT" ] && echo "Error: extension '$EXT' not found." && exit 1
+  if [ ! -d "$REPO_DIR/extensions/$EXT" ]; then
+    echo "Error: extension '$EXT' not found." >&2
+    exit 1
+  fi
   do_install "$EXT"
 else
   for dir in "$REPO_DIR"/extensions/*/; do
