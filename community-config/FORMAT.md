@@ -172,6 +172,63 @@ description: <description>
 <body>
 ```
 
+## Provenance & Forks
+
+Components carry a `provenance:` block in their frontmatter that survives
+forks and lets feedback flow back to the right repo. The block is
+optional but recommended for any component intended to be re-shared.
+
+```yaml
+---
+name: my-component
+description: "..."
+type: skill
+provenance:
+  canonical: "${CANONICAL_REPO}"   # origin (audit + license trace)
+  feedback:  "${FEEDBACK_REPO}"    # MR target (defaults to canonical)
+  version:   "1.0.0"               # version at build/import
+---
+```
+
+### Placeholder resolution
+
+`${SHELL_LIKE}` placeholders are resolved at **build time** by
+`scripts/build-components.sh` from `crewrig.config.toml` at the repo
+root. Each line in the config file maps an uppercased key to a value:
+
+```toml
+canonical_repo = "https://github.com/hcross/crewrig"
+feedback_repo  = "https://github.com/hcross/crewrig"
+```
+
+The build then substitutes `${CANONICAL_REPO}` and `${FEEDBACK_REPO}`
+verbatim in the generated outputs (`.gemini/`, `.claude/`). Source
+files keep the placeholders untouched.
+
+### Forking workflow
+
+When you fork crewrig (or a fork of it):
+
+1. Edit `crewrig.config.toml` to point at your URLs. Typically:
+   - Keep `canonical_repo` pointing at the upstream you forked from
+     (audit trail).
+   - Set `feedback_repo` to your own repo so harness feedback lands
+     internally.
+2. Run `task build-components` to regenerate the outputs with your
+   values.
+3. Commit both `crewrig.config.toml` and the regenerated outputs.
+
+The `version:` field in `provenance:` is a literal per-component
+string, not a placeholder. It tracks the component's own evolution
+independently from the host repo.
+
+### Components without a `provenance:` block
+
+Components shipped before the provenance contract existed (or
+intentionally unscoped) build unchanged — the resolver only acts on
+content that actually contains placeholders. There is no automatic
+backfill.
+
 ## Parser Requirements
 
 The build script (`scripts/build-components.sh`) requires:

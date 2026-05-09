@@ -14,10 +14,14 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMMUNITY_DIR="$REPO_DIR/community-config"
-TARGET="${1:-all}"
+TARGET="all"
 CHECK_MODE=false
 
 # --- Parse arguments ---
+# Note: do not seed TARGET from $1. The previous form `TARGET="${1:-all}"`
+# silently set TARGET to `--check` when invoked as `bash ... --check`,
+# which made every later `[ "$TARGET" = "all" ]` test fail and turned the
+# whole --check mode into a silent no-op.
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --target) TARGET="$2"; shift 2 ;;
@@ -30,6 +34,106 @@ done
 command -v yq >/dev/null 2>&1 || { echo "Error: yq is required. Install with: brew install yq"; exit 1; }
 
 DRIFT_FOUND=false
+
+# --- Crewrig fork configuration ---
+# Reads crewrig.config.toml at the repo root. Each `key = "value"` line becomes
+# a CFG_<UPPERCASED_KEY> shell variable, and the placeholder ${UPPERCASED_KEY}
+# in component sources resolves to its value at build time. Forks edit this
+# file to redirect provenance/feedback URLs without touching the components.
+CFG_KEYS=""
+load_crewrig_config() {
+  local config="$REPO_DIR/crewrig.config.toml"
+  if [ ! -f "$config" ]; then
+    echo "Warning: $config not found — placeholders will be left literal." >&2
+    return 0
+  fi
+  while IFS='=' read -r raw_key raw_value; do
+    local key
+    key=$(printf '%s' "$raw_key" | tr -d '[:space:]')
+    [ -z "$key" ] && continue
+    case "$key" in \#*) continue ;; esac
+    local value
+    value=$(printf '%s' "$raw_value" | sed -E 's/^[[:space:]]*"?//; s/"?[[:space:]]*$//')
+    local upper
+    upper=$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')
+    printf -v "CFG_${upper}" '%s' "$value"
+    CFG_KEYS="$CFG_KEYS $upper"
+  done < "$config"
+}
+
+# Substitute ${KEY} placeholders in stdin/content with values loaded above.
+# Sed special chars (& \ |) in values are escaped before substitution.
+resolve_placeholders() {
+  local content="$1"
+  local key
+  for key in $CFG_KEYS; do
+    local var_name="CFG_${key}"
+    local value="${!var_name}"
+    local escaped
+    escaped=$(printf '%s' "$value" | sed -e 's/[&\\|]/\\&/g')
+    content=$(printf '%s' "$content" | sed "s|\${${key}}|${escaped}|g")
+  done
+  printf '%s' "$content"
+}
+
+load_crewrig_config
+
+# --- Provenance propagation ---
+# Components may declare a `provenance:` block in their source frontmatter.
+# This block must travel to every output that supports YAML frontmatter, so
+# installers and the harness curator can read where the component came from.
+# The build only natively copies name+description, so we inject provenance
+# explicitly at the bottom of the output frontmatter.
+
+# Returns the provenance YAML block ready to splice into a frontmatter, or
+# empty if the source has no provenance: block.
+provenance_block() {
+  local source="$1"
+  local has_prov
+  has_prov=$(extract_frontmatter "$source" | yq -r 'has("provenance")' 2>/dev/null || echo "false")
+  if [ "$has_prov" != "true" ]; then
+    return 0
+  fi
+  printf 'provenance:\n'
+  extract_frontmatter "$source" \
+    | yq -r '.provenance | to_entries | .[] | "  " + .key + ": \"" + .value + "\""' 2>/dev/null
+}
+
+# Splice a provenance block before the closing `---` of the first frontmatter
+# of `content`. No-op if the source has no provenance.
+# Uses a tempfile to feed multi-line provenance into awk — BSD awk does not
+# accept newlines in `-v var=...`, so we read the block via getline instead.
+inject_provenance() {
+  local content="$1"
+  local source="$2"
+  local prov
+  prov=$(provenance_block "$source")
+  if [ -z "$prov" ]; then
+    printf '%s' "$content"
+    return 0
+  fi
+  local prov_file
+  prov_file=$(mktemp -t crewrig-prov.XXXXXX)
+  printf '%s\n' "$prov" > "$prov_file"
+  printf '%s' "$content" | awk -v provfile="$prov_file" '
+    BEGIN {
+      while ((getline line < provfile) > 0) {
+        prov = (prov == "" ? line : prov "\n" line)
+      }
+      close(provfile)
+      c = 0; injected = 0
+    }
+    /^---$/ {
+      c++
+      if (c == 2 && !injected) {
+        print prov
+        injected = 1
+      }
+    }
+    { print }
+  '
+  rm -f "$prov_file"
+}
 
 # --- Helpers ---
 
@@ -62,10 +166,18 @@ yaml_nested() {
   fi
 }
 
-# Compare file with expected content, report drift
+# Compare file with expected content, report drift.
+# When a source path is passed as $3, splices any `provenance:` block from
+# that source into the output frontmatter before resolving placeholders.
 check_or_write() {
   local target_file="$1"
   local content="$2"
+  local source="${3:-}"
+
+  if [ -n "$source" ]; then
+    content=$(inject_provenance "$content" "$source")
+  fi
+  content=$(resolve_placeholders "$content")
 
   if [ "$CHECK_MODE" = true ]; then
     if [ ! -f "$target_file" ]; then
@@ -118,7 +230,7 @@ description: "$description"
 $body
 GEMINI_EOF
       )
-      check_or_write "$REPO_DIR/.gemini/skills/$name/SKILL.md" "$gemini_content"
+      check_or_write "$REPO_DIR/.gemini/skills/$name/SKILL.md" "$gemini_content" "$source"
     fi
 
     # --- Claude Code output ---
@@ -175,7 +287,7 @@ $claude_frontmatter
 $body
 CLAUDE_EOF
       )
-      check_or_write "$REPO_DIR/.claude/skills/$name/SKILL.md" "$claude_content"
+      check_or_write "$REPO_DIR/.claude/skills/$name/SKILL.md" "$claude_content" "$source"
     fi
   done
 }
@@ -207,7 +319,7 @@ build_commands() {
 prompt = \"\"\"
 $body
 \"\"\""
-      check_or_write "$REPO_DIR/.gemini/commands/$name.toml" "$toml_content"
+      check_or_write "$REPO_DIR/.gemini/commands/$name.toml" "$toml_content" "$source"
     fi
 
     # --- Claude Code output: SKILL.md ---
@@ -236,7 +348,7 @@ $claude_frontmatter
 $body
 CLAUDE_EOF
       )
-      check_or_write "$REPO_DIR/.claude/skills/$name/SKILL.md" "$claude_content"
+      check_or_write "$REPO_DIR/.claude/skills/$name/SKILL.md" "$claude_content" "$source"
     fi
   done
 }
@@ -279,7 +391,7 @@ description: "$description"
 $body
 CLAUDE_EOF
       )
-      check_or_write "$REPO_DIR/.claude/agents/$name/AGENT.md" "$claude_content"
+      check_or_write "$REPO_DIR/.claude/agents/$name/AGENT.md" "$claude_content" "$source"
     fi
   done
 }
