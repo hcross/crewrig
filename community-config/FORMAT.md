@@ -21,7 +21,7 @@ and Claude Code.
 |------|----------------|-------------------|--------------------|
 | `skill` | `skills/<name>/SKILL.md` | `.gemini/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` |
 | `command` | `commands/<name>.md` | `.gemini/commands/<name>.toml` | `.claude/skills/<name>/SKILL.md` |
-| `agent` | `agents/<name>/AGENT.md` | `agents/<name>/PROMPT.md` | `.claude/agents/<name>/AGENT.md` |
+| `agent` | `agents/<name>/AGENT.md` | `.gemini/agents/<name>/PROMPT.md` | `.claude/agents/<name>/AGENT.md` |
 
 Hooks, policies, and MCP servers use JSON formats and are handled
 separately by the build script (merged into tool-specific config files).
@@ -156,7 +156,7 @@ user-invocable: true
 
 ### Agent: `community-config/agents/<name>/AGENT.md`
 
-Gemini CLI → `agents/<name>/PROMPT.md`
+Gemini CLI → `.gemini/agents/<name>/PROMPT.md`
 
 ```markdown
 <body only, no frontmatter>

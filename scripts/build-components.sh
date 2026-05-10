@@ -383,8 +383,10 @@ build_agents() {
     echo "Building agent: $name"
 
     # --- Gemini CLI output: PROMPT.md (body only) ---
+    # Gemini CLI discovers sub-agents at .gemini/agents/<name>/, NOT at the
+    # repo-root ./agents/ directory. The previous output path was unread.
     if [ "$TARGET" = "gemini" ] || [ "$TARGET" = "all" ]; then
-      check_or_write "$REPO_DIR/agents/$name/PROMPT.md" "$body"
+      check_or_write "$REPO_DIR/.gemini/agents/$name/PROMPT.md" "$body"
     fi
 
     # --- Claude Code output: AGENT.md (with frontmatter) ---
