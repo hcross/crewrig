@@ -1,0 +1,121 @@
+---
+name: pr-logbook
+description: "Pull request and logbook composer. Activate when opening a PR, updating a PR description, or appending to a logbook issue. Produces titles, bodies, test plans, and logbook entries that conform to the project's AGENTS.md conventions."
+provenance:
+  canonical: "https://github.com/hcross/crewrig"
+  feedback: "https://github.com/hcross/crewrig"
+  version: "1.0.0"
+---
+
+
+# PR & Logbook Composer
+
+The skill that turns a finished change into a PR a reviewer can read in
+under five minutes, and a logbook entry the next agent can pick up cold.
+
+## When to activate
+
+- Opening a new PR.
+- Updating the body of an existing PR after review feedback.
+- Appending a logbook entry to the PR's linked issue.
+- Drafting the squash-merge commit message.
+
+## Operating mode
+
+### 1. Read the project's PR contract
+
+Before composing, read the project's `AGENTS.md` (or equivalent) for:
+
+- The required PR sections.
+- The commit-message convention (Gitmoji, Conventional Commits, etc.).
+- The logbook label and where logbook issues live.
+- Any branch-naming or merge-method rules.
+
+Do not assume a convention. The same crew of agents serves repos with
+different rules.
+
+### 2. PR title
+
+- Under 70 characters. Imperative mood. No trailing period.
+- For Gitmoji projects, lead with the appropriate emoji.
+- The title states *what* changed, not *why*. The body explains *why*.
+
+### 3. PR body — read this first / how to test / detailed
+
+Default crewrig template — adapt to the project's `AGENTS.md` if it
+specifies otherwise:
+
+```markdown
+<Two sentences max — purpose, for a human reader.>
+
+## How to read this PR?
+
+<Reading order. Highlight the load-bearing files. Call out
+non-obvious design decisions and why they were made.>
+
+## How to test this PR?
+
+<Step-by-step. Prerequisites, commands, expected outcomes. Cover the
+golden path and at least one failure mode.>
+
+## Detailed description (for agents)
+
+<Structured walkthrough of every change, intended for the next agent
+that touches this code. Be explicit about additions, modifications,
+deletions, and the rationale for each.>
+```
+
+### 4. Logbook entries
+
+A logbook is *not* a status update. It is the record the next agent
+will read to avoid your mistakes. Optimise for that reader.
+
+```markdown
+### YYYY-MM-DD — <one-line topic>
+
+**Context**: <what task / PR this entry attaches to>
+
+**What was tried**: <decision or experiment>
+
+**Outcome**: <green / red / partial — with link to evidence>
+
+**Lesson**: <the durable insight, in one sentence>
+```
+
+Append, never rewrite. Even a wrong-turn that was reverted belongs in
+the log — the next agent needs to know it was tried.
+
+### 5. Squash-merge commit message
+
+When the project squash-merges, the commit message is what survives in
+`git log` forever. Compose it deliberately:
+
+```text
+<gitmoji or convention> <imperative-title> (#<pr-number>)
+
+<one paragraph: what the PR delivered, in past tense>
+
+<one paragraph: why — the constraint or motivation that drove it>
+
+<bullet list of significant follow-ups, if any>
+
+Co-authored-by lines, if any.
+```
+
+Do not paste the entire PR description. The commit message is denser.
+
+## Output expectations
+
+- All output in the project's primary language (English by default per
+  crewrig convention; check the project's `AGENTS.md` for overrides).
+- Markdown that renders cleanly on the project's PR platform.
+- No emoji in the body unless the project's convention uses them.
+
+## Friction reporting
+
+Tag per `config/TOOLS.md` → *Friction Reporting* when:
+
+- The project's PR template is contradictory or out of date
+  (`room="process"`).
+- The skill produced a body that the user had to substantially rewrite
+  (`room="prompt"` or `room="format"` depending on the cause).
