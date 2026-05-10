@@ -64,6 +64,9 @@ if ! [[ "$THRESHOLD" =~ ^[0-9]+$ ]] || [ "$THRESHOLD" -lt 1 ]; then
 fi
 
 # --- Dependencies ---
+# Always returns 0 — the function's job is to *resolve* a Python path; the
+# caller does not branch on the exit code. A non-zero return here would
+# trigger `set -e` on the calling assignment when the pipx path is absent.
 auto_detect_mempalace_python() {
   if command -v pipx >/dev/null 2>&1; then
     local pipx_venv
@@ -74,7 +77,6 @@ auto_detect_mempalace_python() {
     fi
   fi
   echo "python3"
-  return 1
 }
 
 MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-$(auto_detect_mempalace_python)}"

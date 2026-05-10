@@ -82,6 +82,9 @@ fi
 
 # --- Dependencies: auto-detect pipx venv or fall back to python3 ---
 auto_detect_mempalace_python() {
+  # Always returns 0 — caller does not branch on exit code, and a non-zero
+  # return would trigger `set -e` on the calling assignment when no pipx
+  # mempalace venv exists (e.g. on a fresh CI runner).
   if command -v pipx >/dev/null 2>&1; then
     local pipx_venv
     pipx_venv=$(pipx environment --value PIPX_HOME 2>/dev/null)/venvs/mempalace
@@ -91,7 +94,6 @@ auto_detect_mempalace_python() {
     fi
   fi
   echo "python3"
-  return 1
 }
 
 MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-$(auto_detect_mempalace_python)}"
