@@ -21,7 +21,7 @@ and Claude Code.
 |------|----------------|-------------------|--------------------|
 | `skill` | `skills/<name>/SKILL.md` | `.gemini/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` |
 | `command` | `commands/<name>.md` | `.gemini/commands/<name>.toml` | `.claude/skills/<name>/SKILL.md` |
-| `agent` | `agents/<name>/AGENT.md` | `.gemini/agents/<name>/PROMPT.md` | `.claude/agents/<name>/AGENT.md` |
+| `agent` | `agents/<name>/AGENT.md` | `.gemini/agents/<name>.md` | `.claude/agents/<name>/AGENT.md` |
 
 Hooks, policies, and MCP servers use JSON formats and are handled
 separately by the build script (merged into tool-specific config files).
@@ -87,7 +87,9 @@ fields by default:
   the frontmatter, body as-is.
 - For `command`: generates a `.toml` file with `description` and the
   body wrapped in `prompt = """..."""`.
-- For `agent`: generates a `PROMPT.md` with the body only (no frontmatter).
+- For `agent`: generates a flat `.gemini/agents/<name>.md` file with YAML
+  frontmatter (`name`, `description`) — required by Gemini CLI's
+  sub-agent discovery — followed by the body as the system prompt.
 
 ### Claude Code Overrides (optional)
 
@@ -156,10 +158,18 @@ user-invocable: true
 
 ### Agent: `community-config/agents/<name>/AGENT.md`
 
-Gemini CLI → `.gemini/agents/<name>/PROMPT.md`
+Gemini CLI → `.gemini/agents/<name>.md`
 
-```markdown
-<body only, no frontmatter>
+```yaml
+---
+name: <name>
+description: <description>
+provenance:        # propagated when present in source
+  canonical: ...
+  feedback: ...
+  version: ...
+---
+<body — becomes the agent's system prompt>
 ```
 
 Claude Code → `.claude/agents/<name>/AGENT.md`

@@ -382,11 +382,24 @@ build_agents() {
 
     echo "Building agent: $name"
 
-    # --- Gemini CLI output: PROMPT.md (body only) ---
-    # Gemini CLI discovers sub-agents at .gemini/agents/<name>/, NOT at the
-    # repo-root ./agents/ directory. The previous output path was unread.
+    # --- Gemini CLI output: <name>.md (flat file with YAML frontmatter) ---
+    # Per https://geminicli.com/docs/core/subagents/#creating-custom-subagents
+    # Gemini CLI requires a flat `.gemini/agents/<name>.md` file whose
+    # frontmatter declares `name` and `description` (required) and optional
+    # `tools`, `model`, etc. The body becomes the system prompt. A directory
+    # layout or a frontmatter-less body is not discovered.
     if [ "$TARGET" = "gemini" ] || [ "$TARGET" = "all" ]; then
-      check_or_write "$REPO_DIR/.gemini/agents/$name/PROMPT.md" "$body"
+      local gemini_content
+      gemini_content=$(cat <<GEMINI_EOF
+---
+name: $name
+description: "$description"
+---
+
+$body
+GEMINI_EOF
+      )
+      check_or_write "$REPO_DIR/.gemini/agents/$name.md" "$gemini_content" "$source"
     fi
 
     # --- Claude Code output: AGENT.md (with frontmatter) ---
