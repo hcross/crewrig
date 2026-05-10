@@ -55,18 +55,45 @@ MemPalace is the unified persistent memory system, replacing the former
 Knowledge Graph Memory and Deep Memory servers. It provides palace-based
 storage, a temporal knowledge graph, semantic search, and an agent diary.
 
-> **MCP-only access.** Every MemPalace operation in this document
-> (`mempalace_status`, `mempalace_search`, `mempalace_add_drawer`,
-> `mempalace_update_drawer`, `mempalace_diary_*`, `mempalace_kg_*`, etc.)
-> is an **MCP tool call** routed through the registered `mempalace` MCP
-> server. **Never** invoke a `mempalace …` shell command via the Bash
-> tool. The `mempalace` CLI binary on `$PATH` exists for human admin
-> tasks (`init`, `migrate`, debug); calling it from an agent bypasses
-> the MCP server's session context, file locking, audit trail, and
-> protocol negotiation, and produces drawers the rest of the agent
-> network cannot see. If a procedure cannot be expressed via the MCP
-> tools listed in *MCP Tools Reference*, ask the user — do not reach
-> for the CLI as a workaround.
+> **MCP-only access from the agent prompt.** Every MemPalace operation
+> in this document (`mempalace_status`, `mempalace_search`,
+> `mempalace_add_drawer`, `mempalace_update_drawer`, `mempalace_diary_*`,
+> `mempalace_kg_*`, etc.) invoked **directly from an agent's reasoning
+> loop** is an **MCP tool call** routed through the registered
+> `mempalace` MCP server. **Never** invoke a `mempalace …` shell command
+> ad-hoc via the Bash tool. The `mempalace` CLI binary on `$PATH` exists
+> for human admin tasks (`init`, `migrate`, debug); calling it
+> opportunistically from an agent bypasses the MCP server's session
+> context, file locking, audit trail, and protocol negotiation, and
+> produces drawers the rest of the agent network cannot see. If a
+> procedure cannot be expressed via the MCP tools listed in *MCP Tools
+> Reference*, ask the user — do not reach for the CLI as a workaround.
+>
+> **Carve-out for bundled skill/agent scripts.** A skill or agent may
+> ship a versioned, source-controlled script that walks MemPalace
+> directly (e.g. via `from mempalace import …`) when the workload would
+> be infeasible through MCP alone — for instance, batch-reading
+> thousands of drawers, which a per-call MCP loop turns into a runtime
+> and token disaster. Such a script is allowed when **all** of these
+> hold:
+>
+> 1. It is checked into the repository alongside the skill/agent that
+>    invokes it (auditability replaces the per-call audit trail).
+> 2. It uses the MemPalace **Python library**, not the shell CLI binary,
+>    so it inherits the same locking and schema guarantees as the MCP
+>    server.
+> 3. It is **read-mostly**; any write path must justify why MCP
+>    `mempalace_add_drawer` / `mempalace_update_drawer` cannot be used
+>    instead, in a comment at the call site.
+> 4. The agent that invokes the script remains the agent of record —
+>    the script is a sub-tool, not a substitute for the agent's MemPalace
+>    discipline (Memory Activation Protocol still applies at session
+>    start).
+>
+> The Harness Curator (`community-config/skills/harness-curator/`) is
+> the canonical user of this carve-out: it batch-reads the
+> `harness-friction` wing, which a per-drawer MCP loop would turn into
+> a multi-thousand-call traversal.
 
 ### Palace Structure Conventions
 
@@ -414,13 +441,18 @@ suggestion: <free-form fix idea, optional but encouraged>
 
 #### Field semantics
 
-- `writer_agent` — same convention as the task-handoff drawer. Lets the
-  Curator attribute clusters and lets the user trace who hit what.
+- `writer_agent` — required, **non-empty**. Same convention as the
+  task-handoff drawer. Lets the Curator attribute clusters and lets the
+  user trace who hit what. An empty value is treated as malformed and
+  the drawer is skipped.
 - `subcategory` — free-form clustering key. Frictions sharing a
   `subcategory` get bundled into the same MR by default.
 - `evidence` — at least one entry is required. Path to the file, URL of
   the failing CI run, link to the transcript line, or a verbatim
-  snippet. Without evidence the report is unactionable.
+  snippet. Without evidence the report is unactionable. The schema
+  above shows the canonical list form; a single inline value
+  (`evidence: <path-or-url>` on one line) is also accepted as a
+  one-entry list — useful when the friction has a single pointer.
 - `canonical` — when set, prefer the value of the offending component's
   own `provenance.canonical` block. Hand-typing a different URL drifts
   the friction away from the component the Curator should route the MR

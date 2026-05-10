@@ -52,3 +52,14 @@ jobs:
 
       - name: Lint Markdown files
         run: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton --ignore communication
+
+  test-harness-curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Smoke-test harness curator
+        run: bash tests/harness/test-curate.sh
