@@ -5,6 +5,10 @@ description: "Structured approach for building, debugging, and hardening CI/CD
   diagnose failing jobs, validate pipeline changes on a branch before merge,
   or integrate platform-specific resources (secrets, registries, certificates)."
 type: skill
+provenance:
+  canonical: "${CANONICAL_REPO}"
+  feedback: "${FEEDBACK_REPO}"
+  version: "1.0.0"
 claude:
   allowed-tools:
     - Read
