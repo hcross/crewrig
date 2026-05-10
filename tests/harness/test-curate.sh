@@ -31,12 +31,16 @@ command -v python3 >/dev/null 2>&1 || {
 }
 
 echo "Running curator on fixture..."
-# Capture stdout to OUT, but let stderr pass through so failures surface in CI.
-# Disable set -e momentarily so we can inspect a non-zero exit before bailing.
+# Capture stdout to OUT and stderr to ERR so we can surface both.
 set +e
-OUT=$(bash "$SCRIPT" --from-stdin --dry-run < "$FIXTURE")
+ERR_FILE=$(mktemp)
+OUT=$(bash -x "$SCRIPT" --from-stdin --dry-run < "$FIXTURE" 2>"$ERR_FILE")
 RC=$?
 set -e
+echo "--- inner stderr (bash -x trace + any errors) ---" >&2
+cat "$ERR_FILE" >&2
+echo "--- end inner stderr ---" >&2
+rm -f "$ERR_FILE"
 if [ "$RC" -ne 0 ] || [ -z "$OUT" ]; then
   echo "FAIL: harness-curate.sh exit=$RC, stdout-len=${#OUT}" >&2
   echo "--- captured stdout ---" >&2
