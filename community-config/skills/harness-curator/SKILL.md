@@ -35,8 +35,8 @@ than proving auto-repair.
 
 - The user runs `/harness-curate` (or equivalent invocation).
 - The user asks for "what frictions has the crew accumulated lately".
-- A scheduled sweep triggers it (auto mode — out of V0 scope, see the
-  follow-up ticket).
+- A scheduled sweep triggers it (auto mode — out of V0 scope, tracked
+  in issue #42).
 
 The Curator is **never** activated implicitly during normal work. If
 you are in the middle of an unrelated task and find yourself reaching
@@ -74,7 +74,7 @@ After loading the frictions:
   (broken pointers).
 
 `--deep` mode (sweep `wing="transcripts"` for unflagged friction
-patterns) is **out of V0 scope** — see the follow-up ticket.
+patterns) is **out of V0 scope** — tracked in issue #43.
 
 ### 3. Cluster
 

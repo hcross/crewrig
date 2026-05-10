@@ -421,6 +421,11 @@ suggestion: <free-form fix idea, optional but encouraged>
 - `evidence` — at least one entry is required. Path to the file, URL of
   the failing CI run, link to the transcript line, or a verbatim
   snippet. Without evidence the report is unactionable.
+- `canonical` — when set, prefer the value of the offending component's
+  own `provenance.canonical` block. Hand-typing a different URL drifts
+  the friction away from the component the Curator should route the MR
+  against. If the offending component cannot be identified at tag time,
+  leave `canonical` empty and let `evidence:` carry the trail.
 - `severity` — `high` is reserved for blockers (e.g. agent corrupted
   data, leaked a secret, or violated a stated guarantee). `low` is for
   papercuts. Default `med`.
