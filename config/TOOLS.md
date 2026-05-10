@@ -333,6 +333,138 @@ Notable v3.3.x facts that shape the protocol above:
 
 ---
 
+## Friction Reporting — Harness Feedback Loop
+
+The crew you operate within is not static. When an agent hits a sharp
+edge during real work — a poorly-worded prompt, a tool that does the
+wrong thing, an output format that breaks downstream parsing — that
+signal must reach the maintainers of the agent system itself.
+Otherwise the same friction repeats forever.
+
+This section defines the **β-light tagging protocol**: agents tag
+frictions as they happen, never blocking the work in progress. A
+separate Curator agent (out of scope for this section) reads the tags
+on demand and proposes feedback MRs against the canonical/feedback
+repos declared in each component's `provenance:` block.
+
+### When to tag
+
+Tag a friction whenever you notice one. Do not pause the user's task.
+The cost of one tag is negligible; the cost of an un-reported friction
+that bites the next agent is much higher.
+
+Concrete triggers:
+
+- A skill or agent prompt led you to a wrong path you had to back out.
+- An output format from another agent broke a downstream tool or parse.
+- A tool invocation produced surprising or inconsistent behaviour.
+- A documented process step turned out to be missing, ambiguous, or
+  out of date.
+- A safeguard / rule blocked a legitimate action and forced a workaround.
+
+If unsure whether something qualifies — tag it. Curation will discard
+noise; silent friction is the failure mode to avoid.
+
+### Where to write
+
+Frictions live in a **global** wing, not in the project wing. A friction
+discovered while working on project X often applies to projects Y and Z
+that fork the same skill — scoping per project would hide the pattern.
+
+```text
+mempalace_add_drawer(
+  wing="harness-friction",
+  room="<category>",
+  content="<payload>"
+)
+```
+
+### Categories (5, fixed)
+
+Use exactly one of these as `room`. Sub-categorisation is free-form
+inside the payload (`subcategory:` field).
+
+| Category | Room name | Use for |
+|----------|-----------|---------|
+| Tool | `tool` | An MCP tool, CLI, or script behaved unexpectedly or has a sharp edge. |
+| Prompt | `prompt` | A skill/agent prompt was misleading, ambiguous, or led you astray. |
+| Format | `format` | An output format broke parsing, mixed concerns, or was hard to consume. |
+| Behavior | `behavior` | The agent (you, or a sibling) did something it should not have, or skipped something it should have done. |
+| Process | `process` | A documented workflow step is missing, contradictory, or out of date. |
+
+### Payload schema
+
+Plain text, structured like the `[TASK:*]` payloads. The `FRICTION:`
+prefix on the first line is what the Curator searches for.
+
+```text
+FRICTION: <one-line title>
+
+writer_agent: <agent-name>
+subcategory: <free-form, optional — e.g. "yq-yaml-merge", "build-resolver">
+session_id: <session id, if available>
+project: <project name where it surfaced, if applicable>
+canonical: <canonical URL of the offending component, if known>
+severity: low | med | high      # default: med
+evidence:
+  - <path or URL #1>
+  - <path or URL #2>
+suggestion: <free-form fix idea, optional but encouraged>
+```
+
+#### Field semantics
+
+- `writer_agent` — same convention as the task-handoff drawer. Lets the
+  Curator attribute clusters and lets the user trace who hit what.
+- `subcategory` — free-form clustering key. Frictions sharing a
+  `subcategory` get bundled into the same MR by default.
+- `evidence` — at least one entry is required. Path to the file, URL of
+  the failing CI run, link to the transcript line, or a verbatim
+  snippet. Without evidence the report is unactionable.
+- `canonical` — when set, prefer the value of the offending component's
+  own `provenance.canonical` block. Hand-typing a different URL drifts
+  the friction away from the component the Curator should route the MR
+  against. If the offending component cannot be identified at tag time,
+  leave `canonical` empty and let `evidence:` carry the trail.
+- `severity` — `high` is reserved for blockers (e.g. agent corrupted
+  data, leaked a secret, or violated a stated guarantee). `low` is for
+  papercuts. Default `med`.
+- `suggestion` — what *you* think would fix it. Optional, but the
+  Curator weights MRs higher when one is present.
+
+#### Minimal example
+
+```text
+FRICTION: Skill prompt suggests yq merge syntax that does not exist on yq v4
+
+writer_agent: claude-code
+subcategory: yq-merge
+canonical: https://github.com/hcross/crewrig
+severity: med
+evidence:
+  - community-config/skills/architect/SKILL.md:42
+suggestion: Replace `yq m -i` with `yq eval-all '. as $i ireduce ...'`.
+```
+
+### What NOT to tag
+
+- One-off mistakes you made that the system did not actively cause —
+  those belong in your diary, not in `harness-friction`.
+- Bugs in the user's code under review — those belong in the project
+  logbook issue.
+- Missing features you wished existed — open a GitHub issue against
+  the canonical repo instead. Friction reporting is for *defects in
+  the agent system itself*, not feature requests.
+
+### Read side
+
+Reading `harness-friction` is the Curator agent's job, not the working
+agents'. If you find yourself searching this wing during normal work,
+you are off-task. The wing is write-mostly for everyone except the
+Curator.
+
+---
+
 ## Sequential Thinking — Working Memory Protocol
 
 Sequential Thinking is the working memory used for structuring complex
