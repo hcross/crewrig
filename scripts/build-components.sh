@@ -61,8 +61,13 @@ load_crewrig_config() {
   done < "$config"
 }
 
-# Substitute ${KEY} placeholders in stdin/content with values loaded above.
-# Sed special chars (& \ |) in values are escaped before substitution.
+# Substitute ${KEY} placeholders in `content` with values loaded above.
+# Sed-special characters in the value (`&`, `\`, `|`) are escaped first.
+# Escaping the literal `\` is what protects against backreferences too:
+# a value of `\1` becomes `\\1` after the escape, which sed reads as a
+# literal backslash followed by `1` — not a backref. Bash 5.2+ builtin
+# substitution `${var//pat/repl}` would have its own `&`-as-match trap
+# that does not exist on bash 3.2 (macOS default), so sed is portable.
 resolve_placeholders() {
   local content="$1"
   local key
@@ -86,16 +91,17 @@ load_crewrig_config
 # explicitly at the bottom of the output frontmatter.
 
 # Returns the provenance YAML block ready to splice into a frontmatter, or
-# empty if the source has no provenance: block.
+# empty if `frontmatter` (already extracted) has no `provenance:` key.
+# Takes the frontmatter as input so callers can reuse a single extraction.
 provenance_block() {
-  local source="$1"
+  local frontmatter="$1"
   local has_prov
-  has_prov=$(extract_frontmatter "$source" | yq -r 'has("provenance")' 2>/dev/null || echo "false")
+  has_prov=$(printf '%s\n' "$frontmatter" | yq -r 'has("provenance")' 2>/dev/null || echo "false")
   if [ "$has_prov" != "true" ]; then
     return 0
   fi
   printf 'provenance:\n'
-  extract_frontmatter "$source" \
+  printf '%s\n' "$frontmatter" \
     | yq -r '.provenance | to_entries | .[] | "  " + .key + ": \"" + .value + "\""' 2>/dev/null
 }
 
@@ -106,8 +112,10 @@ provenance_block() {
 inject_provenance() {
   local content="$1"
   local source="$2"
+  local frontmatter
+  frontmatter=$(extract_frontmatter "$source")
   local prov
-  prov=$(provenance_block "$source")
+  prov=$(provenance_block "$frontmatter")
   if [ -z "$prov" ]; then
     printf '%s' "$content"
     return 0

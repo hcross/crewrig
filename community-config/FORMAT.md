@@ -201,9 +201,11 @@ canonical_repo = "https://github.com/hcross/crewrig"
 feedback_repo  = "https://github.com/hcross/crewrig"
 ```
 
-The build then substitutes `${CANONICAL_REPO}` and `${FEEDBACK_REPO}`
-verbatim in the generated outputs (`.gemini/`, `.claude/`). Source
-files keep the placeholders untouched.
+The build substitutes every `${KEY}` placeholder it encounters in the
+generated outputs (`.gemini/`, `.claude/`) — frontmatter **and** body —
+not only inside the `provenance:` block. This is intentional: components
+may reference `${CANONICAL_REPO}` or other config keys in their prompt
+body too. Source files keep the placeholders untouched.
 
 ### Forking workflow
 
