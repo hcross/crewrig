@@ -55,18 +55,45 @@ MemPalace is the unified persistent memory system, replacing the former
 Knowledge Graph Memory and Deep Memory servers. It provides palace-based
 storage, a temporal knowledge graph, semantic search, and an agent diary.
 
-> **MCP-only access.** Every MemPalace operation in this document
-> (`mempalace_status`, `mempalace_search`, `mempalace_add_drawer`,
-> `mempalace_update_drawer`, `mempalace_diary_*`, `mempalace_kg_*`, etc.)
-> is an **MCP tool call** routed through the registered `mempalace` MCP
-> server. **Never** invoke a `mempalace …` shell command via the Bash
-> tool. The `mempalace` CLI binary on `$PATH` exists for human admin
-> tasks (`init`, `migrate`, debug); calling it from an agent bypasses
-> the MCP server's session context, file locking, audit trail, and
-> protocol negotiation, and produces drawers the rest of the agent
-> network cannot see. If a procedure cannot be expressed via the MCP
-> tools listed in *MCP Tools Reference*, ask the user — do not reach
-> for the CLI as a workaround.
+> **MCP-only access from the agent prompt.** Every MemPalace operation
+> in this document (`mempalace_status`, `mempalace_search`,
+> `mempalace_add_drawer`, `mempalace_update_drawer`, `mempalace_diary_*`,
+> `mempalace_kg_*`, etc.) invoked **directly from an agent's reasoning
+> loop** is an **MCP tool call** routed through the registered
+> `mempalace` MCP server. **Never** invoke a `mempalace …` shell command
+> ad-hoc via the Bash tool. The `mempalace` CLI binary on `$PATH` exists
+> for human admin tasks (`init`, `migrate`, debug); calling it
+> opportunistically from an agent bypasses the MCP server's session
+> context, file locking, audit trail, and protocol negotiation, and
+> produces drawers the rest of the agent network cannot see. If a
+> procedure cannot be expressed via the MCP tools listed in *MCP Tools
+> Reference*, ask the user — do not reach for the CLI as a workaround.
+>
+> **Carve-out for bundled skill/agent scripts.** A skill or agent may
+> ship a versioned, source-controlled script that walks MemPalace
+> directly (e.g. via `from mempalace import …`) when the workload would
+> be infeasible through MCP alone — for instance, batch-reading
+> thousands of drawers, which a per-call MCP loop turns into a runtime
+> and token disaster. Such a script is allowed when **all** of these
+> hold:
+>
+> 1. It is checked into the repository alongside the skill/agent that
+>    invokes it (auditability replaces the per-call audit trail).
+> 2. It uses the MemPalace **Python library**, not the shell CLI binary,
+>    so it inherits the same locking and schema guarantees as the MCP
+>    server.
+> 3. It is **read-mostly**; any write path must justify why MCP
+>    `mempalace_add_drawer` / `mempalace_update_drawer` cannot be used
+>    instead, in a comment at the call site.
+> 4. The agent that invokes the script remains the agent of record —
+>    the script is a sub-tool, not a substitute for the agent's MemPalace
+>    discipline (Memory Activation Protocol still applies at session
+>    start).
+>
+> The Harness Curator (`community-config/skills/harness-curator/`) is
+> the canonical user of this carve-out: it batch-reads the
+> `harness-friction` wing, which a per-drawer MCP loop would turn into
+> a multi-thousand-call traversal.
 
 ### Palace Structure Conventions
 
