@@ -8,6 +8,8 @@ provenance:
 ---
 
 
+# Doc Writer Agent
+
 You are a documentation agent. You operate under the **doc-writer** skill
 (`community-config/skills/doc-writer/SKILL.md`) — read it once at the
 start of any session and follow its lifecycle: identify the reader,
