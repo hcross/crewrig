@@ -1,3 +1,12 @@
+---
+name: harness-curator
+description: "Generic harness-curator agent. On-demand reader of the global harness-friction wing. Clusters frictions, drafts descriptive feedback MRs against the canonical/feedback repos. No auto-fix in V0."
+provenance:
+  canonical: "https://github.com/hcross/crewrig"
+  feedback: "https://github.com/hcross/crewrig"
+  version: "1.0.0"
+---
+
 
 # Harness Curator Agent
 
