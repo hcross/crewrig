@@ -144,9 +144,15 @@ def read_from_stdin_file() -> List[Dict[str, Any]]:
 
 
 def read_from_mempalace() -> List[Dict[str, Any]]:
-    """Walk wing=WING via the in-process mempalace API. Read-only."""
+    """Walk wing=WING via the in-process mempalace API. Read-only.
+
+    `tool_list_drawers` returns drawer stubs with `content_preview`
+    (truncated), not the full payload. We follow up with
+    `tool_get_drawer` per ID to fetch the full content and the
+    `metadata.filed_at` timestamp used for the MR body's date range.
+    """
     try:
-        from mempalace.mcp_server import tool_list_drawers
+        from mempalace.mcp_server import tool_get_drawer, tool_list_drawers
     except ImportError as e:
         print(
             f"Error: failed to import mempalace ({e}). "
@@ -162,7 +168,17 @@ def read_from_mempalace() -> List[Dict[str, Any]]:
         batch = page.get("drawers", [])
         if not batch:
             break
-        drawers.extend(batch)
+        for stub in batch:
+            did = stub.get("drawer_id")
+            if not did:
+                continue
+            full = tool_get_drawer(drawer_id=did)
+            drawers.append({
+                "drawer_id": did,
+                "room": full.get("room", "") or stub.get("room", ""),
+                "content": full.get("content", ""),
+                "filed_at": (full.get("metadata") or {}).get("filed_at", ""),
+            })
         if len(batch) < PAGE_SIZE:
             break  # last (partial) page reached
         offset += PAGE_SIZE
@@ -182,15 +198,17 @@ def cluster_key_for(friction: Dict[str, Any], room: str) -> str:
 
 
 def cluster_frictions(
-    parsed: List[Tuple[Dict[str, Any], str]],
+    parsed: List[Tuple[Dict[str, Any], str, str]],
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Group parsed frictions by cluster key. Each value entry stores the
-    friction with its room glued in for downstream traceability."""
+    friction with its room and filed_at glued in for downstream
+    traceability and for date-range computation in the MR body."""
     clusters: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for friction, room in parsed:
+    for friction, room, filed_at in parsed:
         key = cluster_key_for(friction, room)
         enriched = dict(friction)
         enriched["_room"] = room
+        enriched["_filed_at"] = filed_at
         clusters[key].append(enriched)
     return dict(clusters)
 
@@ -233,6 +251,25 @@ def pick_target_repo(cluster: List[Dict[str, Any]]) -> Optional[str]:
 # --- MR body composition --------------------------------------------------
 
 
+def cluster_date_range(cluster: List[Dict[str, Any]]) -> str:
+    """Compute a "from–to" date range from `_filed_at` timestamps.
+    Returns an empty string when no friction in the cluster carries a
+    timestamp (e.g. test fixture without metadata)."""
+    dates = []
+    for f in cluster:
+        ts = f.get("_filed_at", "")
+        if not ts:
+            continue
+        # filed_at is ISO 8601 (`2026-04-29T00:16:09.949576`); keep date.
+        dates.append(ts.split("T", 1)[0])
+    if not dates:
+        return ""
+    dates.sort()
+    if dates[0] == dates[-1]:
+        return dates[0]
+    return f"{dates[0]} → {dates[-1]}"
+
+
 def compose_body(
     cluster_key: str,
     cluster: List[Dict[str, Any]],
@@ -244,9 +281,11 @@ def compose_body(
     lines: List[str] = []
     lines.append(f"## Friction cluster: `{cluster_key}`")
     lines.append("")
+    date_range = cluster_date_range(cluster)
+    when = f" ({date_range})" if date_range else ""
     lines.append(
         f"{size} friction{'s' if size != 1 else ''} tagged across the "
-        f"`harness-friction` wing. Routed to `{target_repo}`."
+        f"`harness-friction` wing{when}. Routed to `{target_repo}`."
     )
     lines.append("")
     # Pattern paragraph: leave room for human / future LLM enrichment in V0
@@ -306,9 +345,13 @@ def compose_body(
 
 
 def safe_slug(s: str) -> str:
-    """Slugify a cluster key for use in a branch name."""
+    """Slugify a cluster key for use in a branch name. Truncated to
+    60 characters to stay under common Git refname limits and GitHub's
+    branch-name length checks; verbose subcategories survive in the MR
+    title and body, just not in the branch name."""
     s = re.sub(r"[^a-zA-Z0-9._-]+", "-", s).strip("-")
-    return s.lower() or "unknown"
+    s = s.lower() or "unknown"
+    return s[:60].rstrip("-") or "unknown"
 
 
 def main() -> int:
@@ -331,15 +374,16 @@ def main() -> int:
         "routing_failures": 0,
     }
 
-    parsed: List[Tuple[Dict[str, Any], str]] = []
+    parsed: List[Tuple[Dict[str, Any], str, str]] = []
     for drawer in drawers:
         content = drawer.get("content", "")
         room = drawer.get("room", "")
+        filed_at = drawer.get("filed_at", "")
         friction = parse_friction(content)
         if friction is None:
             stats["skipped_malformed"] += 1
             continue
-        parsed.append((friction, room))
+        parsed.append((friction, room, filed_at))
         stats["valid_frictions"] += 1
 
     clusters = cluster_frictions(parsed)

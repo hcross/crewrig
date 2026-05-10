@@ -441,13 +441,18 @@ suggestion: <free-form fix idea, optional but encouraged>
 
 #### Field semantics
 
-- `writer_agent` — same convention as the task-handoff drawer. Lets the
-  Curator attribute clusters and lets the user trace who hit what.
+- `writer_agent` — required, **non-empty**. Same convention as the
+  task-handoff drawer. Lets the Curator attribute clusters and lets the
+  user trace who hit what. An empty value is treated as malformed and
+  the drawer is skipped.
 - `subcategory` — free-form clustering key. Frictions sharing a
   `subcategory` get bundled into the same MR by default.
 - `evidence` — at least one entry is required. Path to the file, URL of
   the failing CI run, link to the transcript line, or a verbatim
-  snippet. Without evidence the report is unactionable.
+  snippet. Without evidence the report is unactionable. The schema
+  above shows the canonical list form; a single inline value
+  (`evidence: <path-or-url>` on one line) is also accepted as a
+  one-entry list — useful when the friction has a single pointer.
 - `canonical` — when set, prefer the value of the offending component's
   own `provenance.canonical` block. Hand-typing a different URL drifts
   the friction away from the component the Curator should route the MR

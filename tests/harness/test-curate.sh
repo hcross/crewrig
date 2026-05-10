@@ -56,12 +56,12 @@ assert() {
   fi
 }
 
-# 5 input drawers
-assert "stats.total_drawers"       "5" "$(echo "$OUT" | jq -r '.stats.total_drawers')"
+# 6 input drawers
+assert "stats.total_drawers"       "6" "$(echo "$OUT" | jq -r '.stats.total_drawers')"
 
-# 4 valid (drw-005 is malformed)
+# 4 valid; 2 malformed: drw-005 (no FRICTION: prefix) and drw-006 (empty writer_agent)
 assert "stats.valid_frictions"     "4" "$(echo "$OUT" | jq -r '.stats.valid_frictions')"
-assert "stats.skipped_malformed"   "1" "$(echo "$OUT" | jq -r '.stats.skipped_malformed')"
+assert "stats.skipped_malformed"   "2" "$(echo "$OUT" | jq -r '.stats.skipped_malformed')"
 
 # 3 cluster keys: yq-merge, gh-body-truncation, parked-singleton
 assert "stats.clusters_formed"     "3" "$(echo "$OUT" | jq -r '.stats.clusters_formed')"
@@ -87,13 +87,31 @@ assert "yq-merge.cluster_size"     "2" "$(echo "$YQ" | jq -r '.cluster_size')"
 assert "yq-merge.target_repo"      "https://github.com/hcross/crewrig" \
   "$(echo "$YQ" | jq -r '.target_repo')"
 
-# Body must contain at least one evidence pointer (non-empty body assertion).
+# Both yq-merge frictions came from room="prompt"; assert the room
+# propagates correctly through cluster_frictions().
+YQ_ROOMS=$(echo "$YQ" | jq -r '[.frictions[]._room] | unique | join(",")')
+assert "yq-merge.frictions[*]._room" "prompt" "$YQ_ROOMS"
+
+# Inline evidence (drw-002 used `evidence: <url>` form) must produce
+# a single-entry list — not a parse miss.
+DRW2_EVIDENCE=$(echo "$YQ" | jq -r '.frictions[] | select(.title | test("empty file")) | .evidence | length')
+assert "drw-002.evidence count (inline form)" "1" "$DRW2_EVIDENCE"
+
+# Body must contain at least one evidence pointer.
 YQ_BODY=$(echo "$YQ" | jq -r '.body')
 echo "$YQ_BODY" | grep -q "community-config/skills/architect/SKILL.md:42" || {
   echo "FAIL: yq-merge body missing evidence pointer from drw-001" >&2
   exit 1
 }
 echo "  PASS yq-merge.body contains evidence"
+
+# Body must include the date range computed from filed_at metadata.
+echo "$YQ_BODY" | grep -q "2026-05-08 → 2026-05-10" || {
+  echo "FAIL: yq-merge body missing date range" >&2
+  echo "$YQ_BODY" >&2
+  exit 1
+}
+echo "  PASS yq-merge.body contains date range"
 
 # Branch name follows the harness/<slug>-<date> shape.
 YQ_BRANCH=$(echo "$YQ" | jq -r '.branch_name')
@@ -103,9 +121,11 @@ YQ_BRANCH=$(echo "$YQ" | jq -r '.branch_name')
 }
 echo "  PASS yq-merge.branch_name format"
 
-# High-severity singleton bypass produced its own MR.
+# High-severity singleton bypass produced its own MR; room is "tool".
 HIGH=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "gh-body-truncation")')
 [ -n "$HIGH" ] || { echo "FAIL: severity:high singleton not promoted" >&2; exit 1; }
+HIGH_ROOM=$(echo "$HIGH" | jq -r '.frictions[0]._room')
+assert "gh-body-truncation.frictions[0]._room" "tool" "$HIGH_ROOM"
 echo "  PASS severity:high singleton promoted to cluster"
 
 # Parked singleton is NOT in the clusters output.

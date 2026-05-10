@@ -2,16 +2,19 @@
   {
     "drawer_id": "drw-001",
     "room": "prompt",
+    "filed_at": "2026-05-08T09:14:22.000000",
     "content": "FRICTION: Skill prompt suggests yq merge syntax that does not exist on yq v4\n\nwriter_agent: claude-code\nsubcategory: yq-merge\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - community-config/skills/architect/SKILL.md:42\nsuggestion: Replace `yq m -i` with `yq eval-all '. as $i ireduce ...'`."
   },
   {
     "drawer_id": "drw-002",
     "room": "prompt",
-    "content": "FRICTION: yq merge example produced an empty file\n\nwriter_agent: gemini-cli\nsubcategory: yq-merge\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - https://example.com/ci-run/12345\n  - community-config/skills/developer/SKILL.md:88\nsuggestion: Same fix — eval-all reduce form."
+    "filed_at": "2026-05-10T11:42:05.000000",
+    "content": "FRICTION: yq merge example produced an empty file\n\nwriter_agent: gemini-cli\nsubcategory: yq-merge\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence: https://example.com/ci-run/12345\nsuggestion: Same fix — eval-all reduce form."
   },
   {
     "drawer_id": "drw-003",
     "room": "tool",
+    "filed_at": "2026-05-09T17:03:11.000000",
     "content": "FRICTION: gh CLI silently truncates very long PR bodies\n\nwriter_agent: claude-code\nsubcategory: gh-body-truncation\ncanonical: https://github.com/hcross/crewrig\nseverity: high\nevidence:\n  - https://github.com/hcross/crewrig/pull/40#issuecomment-XXX\nsuggestion: Detect length > 65535 and chunk into a follow-up comment."
   },
   {
@@ -23,5 +26,11 @@
     "drawer_id": "drw-005",
     "room": "process",
     "content": "Not a friction at all — random text the curator should skip."
+  },
+  {
+    "drawer_id": "drw-006",
+    "room": "prompt",
+    "filed_at": "2026-05-10T08:00:00.000000",
+    "content": "FRICTION: Empty writer_agent — must be rejected per schema\n\nwriter_agent:\nsubcategory: should-be-rejected\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - foo.md:1"
   }
 ]
