@@ -45,8 +45,9 @@ for bundled skill/agent scripts* for the rationale.
 
 ```bash
 task harness-curate -- --dry-run
-# or directly:
-bash scripts/harness-curate.sh --dry-run
+# or directly, from the skill bundle (works whether installed at project
+# level under .gemini/.claude or user level under ~/.gemini/~/.claude):
+bash scripts/curate.sh --dry-run
 ```
 
 The script walks `wing="harness-friction"` via the MemPalace Python

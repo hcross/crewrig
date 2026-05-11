@@ -9,9 +9,11 @@
 
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-FIXTURE="$REPO_DIR/tests/harness/sample-frictions.json"
-SCRIPT="$REPO_DIR/scripts/harness-curate.sh"
+# Paths are resolved relative to this script's location so the test runs
+# from anywhere the skill is installed (project-level OR user-level).
+SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+FIXTURE="$SKILL_DIR/assets/sample-frictions.json"
+SCRIPT="$SKILL_DIR/scripts/curate.sh"
 
 [ -f "$FIXTURE" ] || { echo "FAIL: fixture missing: $FIXTURE" >&2; exit 1; }
 [ -x "$SCRIPT" ] || chmod +x "$SCRIPT"

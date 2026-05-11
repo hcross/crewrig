@@ -205,6 +205,42 @@ check_or_write() {
   fi
 }
 
+# Copy the spec-recognised skill resource subfolders (`scripts/`,
+# `references/`, `assets/` per https://agentskills.io/specification)
+# verbatim from source to target. Respects --check mode the same way
+# check_or_write does. Preserves the executable bit so packaged scripts
+# stay runnable after install.
+propagate_skill_resources() {
+  local src_dir="$1"
+  local target_dir="$2"
+  local subdir src_sub src_file rel target_file
+  for subdir in scripts references assets; do
+    src_sub="$src_dir/$subdir"
+    [ -d "$src_sub" ] || continue
+    while IFS= read -r src_file; do
+      rel="${src_file#$src_sub/}"
+      target_file="$target_dir/$subdir/$rel"
+      if [ "$CHECK_MODE" = true ]; then
+        if [ ! -f "$target_file" ]; then
+          echo "DRIFT: $target_file does not exist (expected from source)"
+          DRIFT_FOUND=true
+          continue
+        fi
+        if ! cmp -s "$src_file" "$target_file"; then
+          echo "DRIFT: $target_file differs from source"
+          DRIFT_FOUND=true
+          continue
+        fi
+      else
+        mkdir -p "$(dirname "$target_file")"
+        cp "$src_file" "$target_file"
+        [ -x "$src_file" ] && chmod +x "$target_file"
+        echo "  Generated: $target_file"
+      fi
+    done < <(find "$src_sub" -type f | sort)
+  done
+}
+
 # --- Build Skills ---
 build_skills() {
   local skills_dir="$COMMUNITY_DIR/skills"
@@ -239,6 +275,7 @@ $body
 GEMINI_EOF
       )
       check_or_write "$REPO_DIR/.gemini/skills/$name/SKILL.md" "$gemini_content" "$source"
+      propagate_skill_resources "$skill_dir" "$REPO_DIR/.gemini/skills/$name"
     fi
 
     # --- Claude Code output ---
@@ -296,6 +333,7 @@ $body
 CLAUDE_EOF
       )
       check_or_write "$REPO_DIR/.claude/skills/$name/SKILL.md" "$claude_content" "$source"
+      propagate_skill_resources "$skill_dir" "$REPO_DIR/.claude/skills/$name"
     fi
   done
 }

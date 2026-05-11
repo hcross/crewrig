@@ -62,4 +62,4 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Smoke-test harness curator
-        run: bash tests/harness/test-curate.sh
+        run: bash community-config/skills/harness-curator/scripts/test.sh

@@ -181,8 +181,8 @@ tasks:
 
   harness-curate:
     desc: "Run the Harness Curator (task harness-curate -- [--apply | --from-stdin])"
-    cmd: bash {{.REPO_DIR}}/scripts/harness-curate.sh {{.CLI_ARGS}}
+    cmd: bash {{.REPO_DIR}}/community-config/skills/harness-curator/scripts/curate.sh {{.CLI_ARGS}}
 
   test-harness-curate:
     desc: "Smoke-test the Harness Curator against the bundled fixture"
-    cmd: bash {{.REPO_DIR}}/tests/harness/test-curate.sh
+    cmd: bash {{.REPO_DIR}}/community-config/skills/harness-curator/scripts/test.sh
