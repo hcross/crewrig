@@ -255,6 +255,35 @@ The `version:` field in `provenance:` is a literal per-component
 string, not a placeholder. It tracks the component's own evolution
 independently from the host repo.
 
+### Version semantics (SemVer)
+
+The `version:` field follows [Semantic Versioning](https://semver.org/)
+(`MAJOR.MINOR.PATCH`):
+
+| Bump | When |
+|---|---|
+| **PATCH** (`1.0.0 → 1.0.1`) | Friction-driven fix or wording change. The skill's contract is unchanged; an agent following `1.0.0` and an agent following `1.0.1` produce equivalent output. Most curator-driven fixes are PATCH. |
+| **MINOR** (`1.0.1 → 1.1.0`) | Additive change. New section, new recognition signal, new payload field, new optional behaviour. Backward-compatible — agents following `1.0.x` keep working unchanged. |
+| **MAJOR** (`1.1.0 → 2.0.0`) | Breaking contract change. Removed payload fields, renamed required fields, semantics flip. Forks pinning `1.x` need to migrate consciously. |
+
+**Bump rule.** Every PR that touches a `SKILL.md` or `AGENT.md`
+source under `community-config/` MUST bump `provenance.version` in
+the same diff. CI enforces this via `scripts/check-skill-versions.sh`
+(see `task check-skill-versions` for the local invocation). The
+rationale:
+
+- A friction tag captured `evidence: <path>:<line>` against an
+  unspecified version drifts silently once the source changes. The
+  version pins the contract observed at tag time.
+- Forks that install at user level (`~/.gemini/`, `~/.claude/`) need
+  a signal to re-pull. A version field with no bump = no signal.
+- Maintainers triaging `harness-feedback` issues can compare the
+  friction's observed version against the current canonical version
+  and immediately see whether the friction has already been fixed.
+
+The bump goes in the same PR as the change. A "version-only bump" PR
+is not a thing — it always accompanies a content edit.
+
 ### Components without a `provenance:` block
 
 Components shipped before the provenance contract existed (or

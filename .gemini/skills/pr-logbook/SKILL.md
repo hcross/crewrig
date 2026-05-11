@@ -4,7 +4,7 @@ description: "Pull request and logbook composer. Activate when opening a PR, upd
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.2"
 ---
 
 
@@ -103,6 +103,29 @@ Co-authored-by lines, if any.
 ```
 
 Do not paste the entire PR description. The commit message is denser.
+
+## Cross-cutting: skill / agent source version bumps
+
+This is not a step in the composition lifecycle — it is a *rule*
+that applies to any PR you compose whose diff touches a
+`community-config/skills/*/SKILL.md` or
+`community-config/agents/*/AGENT.md` source. The PR MUST bump
+`provenance.version` in the same diff. The rule is enforced by
+`scripts/check-skill-versions.sh` in CI (and locally via
+`task check-skill-versions`).
+
+SemVer applies:
+
+- **PATCH** for friction-driven fixes and wording changes (the
+  common case — most curator-driven fixes are PATCH).
+- **MINOR** for additive changes (new section, new recognition
+  signal, new optional payload field).
+- **MAJOR** for breaking contract changes (removed payload fields,
+  renamed required fields, semantics flip).
+
+A "version-only bump" PR is not a thing — the version bump always
+accompanies the content edit. See `community-config/FORMAT.md` →
+*Version semantics* for the contract.
 
 ## Output expectations
 

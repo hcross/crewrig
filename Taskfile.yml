@@ -186,3 +186,7 @@ tasks:
   test-harness-curate:
     desc: "Smoke-test the Harness Curator against the bundled fixture"
     cmd: bash {{.REPO_DIR}}/community-config/skills/harness-curator/scripts/test.sh
+
+  check-skill-versions:
+    desc: "Enforce provenance.version bump on changed skill/agent sources (local mirror of the CI guard)"
+    cmd: bash {{.REPO_DIR}}/scripts/check-skill-versions.sh
