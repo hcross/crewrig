@@ -8,7 +8,7 @@ type: skill
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+  version: "1.0.1"
 claude:
   allowed-tools:
     - Read
@@ -111,6 +111,27 @@ Co-authored-by lines, if any.
 ```
 
 Do not paste the entire PR description. The commit message is denser.
+
+### 6. Skill / agent source changes require a version bump
+
+Any PR that touches a `community-config/skills/*/SKILL.md` or
+`community-config/agents/*/AGENT.md` source MUST bump
+`provenance.version` in the same diff. The rule is enforced by
+`scripts/check-skill-versions.sh` in CI (and locally via
+`task check-skill-versions`).
+
+SemVer applies:
+
+- **PATCH** for friction-driven fixes and wording changes (the
+  common case — most curator-driven fixes are PATCH).
+- **MINOR** for additive changes (new section, new recognition
+  signal, new optional payload field).
+- **MAJOR** for breaking contract changes (removed payload fields,
+  renamed required fields, semantics flip).
+
+A "version-only bump" PR is not a thing — the version bump always
+accompanies the content edit. See `community-config/FORMAT.md` →
+*Version semantics* for the contract.
 
 ## Output expectations
 
