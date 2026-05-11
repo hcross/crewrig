@@ -1,0 +1,192 @@
+---
+name: harness-curator
+description: "Harness feedback-loop curator. Activate on demand to read
+  friction tags from the global harness-friction wing, cluster them, and
+  open one descriptive issue per cluster on the canonical/feedback repos
+  declared in components' provenance blocks. The fix MR lands later
+  (human-authored or via the auto-fix mode tracked in #42)."
+type: skill
+compatibility: Requires bash, jq, and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4').
+provenance:
+  canonical: "${CANONICAL_REPO}"
+  feedback: "${FEEDBACK_REPO}"
+  version: "1.0.0"
+claude:
+  allowed-tools:
+    - Read
+    - Bash
+    - Grep
+    - Glob
+  user-invocable: true
+---
+
+# Harness Curator
+
+The agent that closes the harness feedback loop. Reads the frictions
+tagged by sibling agents during real work, clusters them, and opens
+one descriptive issue per cluster against the agent system itself so
+the friction surfaces to the maintainers.
+
+## V0 contract — descriptive issues only
+
+The Curator does **not** attempt a fix. It produces a rich,
+evidence-backed issue body — the artefact is a GitHub *issue*, not a
+PR/MR, because there is no diff yet. The actual fix lands later, as a
+human-authored MR (or via the auto-fix mode tracked in #42) that
+closes the issue. Proving the surfacing loop matters more than proving
+auto-repair.
+
+## When to activate
+
+- The user runs `/harness-curate` (or equivalent invocation).
+- The user asks for "what frictions has the crew accumulated lately".
+- A scheduled sweep triggers it (auto mode — out of V0 scope, tracked
+  in issue #42).
+
+The Curator is **never** activated implicitly during normal work. If
+you are in the middle of an unrelated task and find yourself reaching
+for this skill, you are off-task.
+
+## Operating mode
+
+The heavy lifting (reading the wing, parsing payloads, clustering,
+composing issue bodies) is delegated to a bundled script — you run
+it, read the JSON it returns, and open issues from there. This split
+exists because batch-reading the friction wing per-call through MCP
+would be a multi-thousand-call traversal; see `config/TOOLS.md` →
+*Carve-out for bundled skill/agent scripts* for the rationale.
+
+### 1. Run the curator script
+
+```bash
+task harness-curate -- --dry-run
+# or directly, from the skill bundle (works whether installed at project
+# level under .gemini/.claude or user level under ~/.gemini/~/.claude):
+bash scripts/curate.sh --dry-run
+```
+
+The script walks `wing="harness-friction"` via the MemPalace Python
+library, parses every `FRICTION:` payload, clusters, and emits a JSON
+document on stdout:
+
+```json
+{
+  "stats": {
+    "total_drawers": 12,
+    "valid_frictions": 11,
+    "skipped_malformed": 1,
+    "clusters_formed": 4,
+    "clusters_above_threshold": 2,
+    "clusters_parked": 2,
+    "routing_failures": 0
+  },
+  "clusters": [
+    {
+      "cluster_key": "yq-merge",
+      "cluster_size": 3,
+      "target_repo": "https://github.com/hcross/crewrig",
+      "title": "Friction cluster: yq-merge (3 reports)",
+      "body": "<markdown>",
+      "labels": ["harness-feedback", "room:prompt", "severity:med"],
+      "frictions": [...]
+    }
+  ]
+}
+```
+
+### 2. Validate the output before opening anything
+
+Read the JSON. Check the stats — high `skipped_malformed` or
+`routing_failures` is a signal that the wing has rot, and you should
+investigate before opening issues. Spot-check at least one body to
+make sure it reads sensibly.
+
+### 3. Open the issues
+
+Two paths, equivalent in outcome:
+
+- **Let the script do it**: `task harness-curate -- --apply`. The
+  script opens one issue per cluster via `gh issue create`, with all
+  three labels from the JSON (`harness-feedback`, `room:<x>`,
+  `severity:<y>`).
+- **Open them yourself**: iterate the JSON, use the GitHub MCP (or
+  `gh`) per cluster. Use this path when you want to enrich the body
+  before opening (e.g. linking a recent `logbook` issue you noticed
+  while reviewing).
+
+Either way: **one issue per cluster**. Resist bundling — independent
+clusters deserve independent triage.
+
+### 4. Threshold + routing rules (encoded in the script)
+
+The script applies these for you. Documented here so you can override
+via flags when the situation warrants:
+
+| Rule | Default | Override |
+|---|---|---|
+| Cluster size threshold | 2 | `--threshold N` |
+| Severity-`high` bypass | always promotes a singleton | (no override — by design) |
+| Target repo | most-frequent `canonical:` in cluster | `--target-repo <url>` for tests |
+| Cluster key | `subcategory:` if set, else `room` | (no override — wire-protocol) |
+| Labels | `harness-feedback` + `room:<dominant>` + `severity:<worst>` | (no override — wire-protocol) |
+
+A cluster with no resolvable `canonical:` and no `--target-repo`
+override counts as a *routing failure* — surfaced in the stats, not
+opened blind.
+
+### Prerequisite: labels exist on the target repo
+
+`gh issue create --label <name>` fails if the label does not already
+exist on the target repo. The three labels the Curator uses
+(`harness-feedback`, `room:<category>` for each of the 5 fixed rooms,
+and `severity:low|med|high`) **must be pre-created** on every repo
+that may receive curator output, before the first `--apply` run.
+A fork maintainer typically does this once at fork setup time.
+
+Recommended creation script (run once per target repo):
+
+```bash
+gh label create harness-feedback --color FBCA04 --description "Auto-curated friction report"
+for room in tool prompt format behavior process; do
+  gh label create "room:$room" --color 0E8A16 --description "Friction category: $room"
+done
+for sev in low med high; do
+  gh label create "severity:$sev" --color "$(test "$sev" = high && echo D93F0B || test "$sev" = med && echo FBCA04 || echo C2E0C6)" --description "Friction severity: $sev"
+done
+```
+
+If `--apply` fails on a missing label, the script surfaces it as a
+`failures:` entry in the run summary. The maintainer creates the
+label and retries.
+
+`--deep` mode (sweep `wing="transcripts"` for unflagged friction
+patterns) is **out of V0 scope** — tracked in issue #43. Auto mode is
+tracked in issue #42.
+
+### 5. Run summary
+
+After applying, post a brief run summary to the user:
+
+- Frictions read / skipped (malformed).
+- Clusters formed / above threshold / parked.
+- Issues opened (with links) / routing failures.
+
+The summary is the primary signal that the loop ran. Even a zero-issue
+run is worth reporting — it tells the user the wing is healthy.
+
+## Output expectations
+
+- One issue per cluster, descriptive body only.
+- Every claim in the body backed by an evidence pointer.
+- Three labels per issue (`harness-feedback`, `room:<x>`, `severity:<y>`)
+  so maintainers can filter and triage natively.
+- No Curator-proposed diff (V0 contract — diffs live in follow-up MRs).
+
+## Friction reporting
+
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The Curator is not exempt from the loop it serves — if the
+curation prompt led to a bad cluster, a wrong routing target, or an
+unactionable issue, report it like any other friction.

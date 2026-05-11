@@ -176,3 +176,17 @@ tasks:
   prune-transcripts:
     desc: "Prune old transcripts from MemPalace (task prune-transcripts -- --days 30 [--apply])"
     cmd: bash {{.REPO_DIR}}/scripts/prune-transcripts.sh {{.CLI_ARGS}}
+
+  # --- Harness Feedback Loop ---
+
+  harness-curate:
+    desc: "Run the Harness Curator (task harness-curate -- [--apply | --from-stdin])"
+    cmd: bash {{.REPO_DIR}}/community-config/skills/harness-curator/scripts/curate.sh {{.CLI_ARGS}}
+
+  test-harness-curate:
+    desc: "Smoke-test the Harness Curator against the bundled fixture"
+    cmd: bash {{.REPO_DIR}}/community-config/skills/harness-curator/scripts/test.sh
+
+  check-skill-versions:
+    desc: "Enforce provenance.version bump on changed skill/agent sources (local mirror of the CI guard)"
+    cmd: bash {{.REPO_DIR}}/scripts/check-skill-versions.sh

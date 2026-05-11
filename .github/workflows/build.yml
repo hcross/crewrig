@@ -2,9 +2,9 @@ name: Build & Validate
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "release/**"]
   push:
-    branches: [main]
+    branches: [main, "release/**"]
     tags-ignore:
       - "**"
 
@@ -52,3 +52,27 @@ jobs:
 
       - name: Lint Markdown files
         run: markdownlint "**/*.md" --ignore node_modules --ignore extension-skeleton --ignore communication
+
+  test-harness-curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Smoke-test harness curator
+        run: bash community-config/skills/harness-curator/scripts/test.sh
+
+  check-skill-versions:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so the base ref resolves
+
+      - name: Enforce version bump on changed skill/agent sources
+        env:
+          BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+        run: bash scripts/check-skill-versions.sh

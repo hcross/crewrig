@@ -55,18 +55,45 @@ MemPalace is the unified persistent memory system, replacing the former
 Knowledge Graph Memory and Deep Memory servers. It provides palace-based
 storage, a temporal knowledge graph, semantic search, and an agent diary.
 
-> **MCP-only access.** Every MemPalace operation in this document
-> (`mempalace_status`, `mempalace_search`, `mempalace_add_drawer`,
-> `mempalace_update_drawer`, `mempalace_diary_*`, `mempalace_kg_*`, etc.)
-> is an **MCP tool call** routed through the registered `mempalace` MCP
-> server. **Never** invoke a `mempalace …` shell command via the Bash
-> tool. The `mempalace` CLI binary on `$PATH` exists for human admin
-> tasks (`init`, `migrate`, debug); calling it from an agent bypasses
-> the MCP server's session context, file locking, audit trail, and
-> protocol negotiation, and produces drawers the rest of the agent
-> network cannot see. If a procedure cannot be expressed via the MCP
-> tools listed in *MCP Tools Reference*, ask the user — do not reach
-> for the CLI as a workaround.
+> **MCP-only access from the agent prompt.** Every MemPalace operation
+> in this document (`mempalace_status`, `mempalace_search`,
+> `mempalace_add_drawer`, `mempalace_update_drawer`, `mempalace_diary_*`,
+> `mempalace_kg_*`, etc.) invoked **directly from an agent's reasoning
+> loop** is an **MCP tool call** routed through the registered
+> `mempalace` MCP server. **Never** invoke a `mempalace …` shell command
+> ad-hoc via the Bash tool. The `mempalace` CLI binary on `$PATH` exists
+> for human admin tasks (`init`, `migrate`, debug); calling it
+> opportunistically from an agent bypasses the MCP server's session
+> context, file locking, audit trail, and protocol negotiation, and
+> produces drawers the rest of the agent network cannot see. If a
+> procedure cannot be expressed via the MCP tools listed in *MCP Tools
+> Reference*, ask the user — do not reach for the CLI as a workaround.
+>
+> **Carve-out for bundled skill/agent scripts.** A skill or agent may
+> ship a versioned, source-controlled script that walks MemPalace
+> directly (e.g. via `from mempalace import …`) when the workload would
+> be infeasible through MCP alone — for instance, batch-reading
+> thousands of drawers, which a per-call MCP loop turns into a runtime
+> and token disaster. Such a script is allowed when **all** of these
+> hold:
+>
+> 1. It is checked into the repository alongside the skill/agent that
+>    invokes it (auditability replaces the per-call audit trail).
+> 2. It uses the MemPalace **Python library**, not the shell CLI binary,
+>    so it inherits the same locking and schema guarantees as the MCP
+>    server.
+> 3. It is **read-mostly**; any write path must justify why MCP
+>    `mempalace_add_drawer` / `mempalace_update_drawer` cannot be used
+>    instead, in a comment at the call site.
+> 4. The agent that invokes the script remains the agent of record —
+>    the script is a sub-tool, not a substitute for the agent's MemPalace
+>    discipline (Memory Activation Protocol still applies at session
+>    start).
+>
+> The Harness Curator (`community-config/skills/harness-curator/`) is
+> the canonical user of this carve-out: it batch-reads the
+> `harness-friction` wing, which a per-drawer MCP loop would turn into
+> a multi-thousand-call traversal.
 
 ### Palace Structure Conventions
 
@@ -330,6 +357,173 @@ Notable v3.3.x facts that shape the protocol above:
   results since v3.3.0. The keyword share is real but does not
   overcome volumetric imbalance from the `transcripts` wing — always
   scope by `wing` and `room` for the handoff lookup.
+
+---
+
+## Friction Reporting — Harness Feedback Loop
+
+The crew you operate within is not static. When an agent hits a sharp
+edge during real work — a poorly-worded prompt, a tool that does the
+wrong thing, an output format that breaks downstream parsing — that
+signal must reach the maintainers of the agent system itself.
+Otherwise the same friction repeats forever.
+
+This section defines the **fire-and-forget tagging protocol**: agents
+tag frictions as they happen, never blocking the work in progress and
+never waiting for a synchronous acknowledgement. A separate Curator
+agent (out of scope for this section) reads the tags on demand and
+proposes feedback MRs against the canonical/feedback repos declared
+in each component's `provenance:` block.
+
+### When to tag
+
+Tag a friction whenever a **recognition signal** fires (next section).
+Do not pause the user's task longer than the tag itself. The cost of
+one tag is negligible; the cost of an un-reported friction that bites
+the next agent is much higher.
+
+If unsure whether something qualifies — tag it. Curation will discard
+noise; silent friction is the failure mode to avoid.
+
+### Recognition signals
+
+These are the canonical signals that **must** trigger a tag. They are
+listed here, not duplicated across every skill, so the contract has
+one source of truth.
+
+1. **User pushback.** The user contests, corrects, or reverts the
+   action you just took, or reformulates the same intent because your
+   previous response was misaligned.
+2. **Sibling-skill workaround.** You find yourself contorting around
+   a constraint set by another skill or agent — not by the user's
+   request.
+3. **Tool surprise (second time).** A tool produced surprising or
+   inconsistent behaviour for the second time in the same session.
+   First time is bad luck; second time is a pattern.
+4. **Process gap.** A documented workflow step turned out to be
+   missing, ambiguous, contradictory, or out of date.
+5. **Safeguard friction.** A rule or guard blocked a legitimate
+   action and forced a workaround you had to explain explicitly to
+   the user.
+
+When any signal fires, **tag the friction before resuming work** —
+not "consider tagging", not "when convenient". The fire-and-forget
+property qualifies the *transport* (no ack expected); it does not
+make the trigger optional.
+
+### How to tag — the `harness-report` skill
+
+The operational procedure (identifying the offender, picking the
+room, filling the payload) lives in
+`community-config/skills/harness-report/SKILL.md`. Any skill or
+agent that needs to tag a friction must invoke `harness-report`
+rather than re-implementing the protocol inline. This keeps the
+contract single-sourced and lets future improvements (richer
+`evidence:` format, new recognition signals, etc.) propagate without
+editing every skill body.
+
+### Where to write
+
+Frictions live in a **global** wing, not in the project wing. A friction
+discovered while working on project X often applies to projects Y and Z
+that fork the same skill — scoping per project would hide the pattern.
+
+```text
+mempalace_add_drawer(
+  wing="harness-friction",
+  room="<category>",
+  content="<payload>"
+)
+```
+
+### Categories (5, fixed)
+
+Use exactly one of these as `room`. Sub-categorisation is free-form
+inside the payload (`subcategory:` field).
+
+| Category | Room name | Use for |
+|----------|-----------|---------|
+| Tool | `tool` | An MCP tool, CLI, or script behaved unexpectedly or has a sharp edge. |
+| Prompt | `prompt` | A skill/agent prompt was misleading, ambiguous, or led you astray. |
+| Format | `format` | An output format broke parsing, mixed concerns, or was hard to consume. |
+| Behavior | `behavior` | The agent (you, or a sibling) did something it should not have, or skipped something it should have done. |
+| Process | `process` | A documented workflow step is missing, contradictory, or out of date. |
+
+### Payload schema
+
+Plain text, structured like the `[TASK:*]` payloads. The `FRICTION:`
+prefix on the first line is what the Curator searches for.
+
+```text
+FRICTION: <one-line title>
+
+writer_agent: <agent-name>
+subcategory: <free-form, optional — e.g. "yq-yaml-merge", "build-resolver">
+session_id: <session id, if available>
+project: <project name where it surfaced, if applicable>
+canonical: <canonical URL of the offending component, if known>
+severity: low | med | high      # default: med
+evidence:
+  - <path or URL #1>
+  - <path or URL #2>
+suggestion: <free-form fix idea, optional but encouraged>
+```
+
+#### Field semantics
+
+- `writer_agent` — required, **non-empty**. Same convention as the
+  task-handoff drawer. Lets the Curator attribute clusters and lets the
+  user trace who hit what. An empty value is treated as malformed and
+  the drawer is skipped.
+- `subcategory` — free-form clustering key. Frictions sharing a
+  `subcategory` get bundled into the same MR by default.
+- `evidence` — at least one entry is required. Path to the file, URL of
+  the failing CI run, link to the transcript line, or a verbatim
+  snippet. Without evidence the report is unactionable. The schema
+  above shows the canonical list form; a single inline value
+  (`evidence: <path-or-url>` on one line) is also accepted as a
+  one-entry list — useful when the friction has a single pointer.
+- `canonical` — when set, prefer the value of the offending component's
+  own `provenance.canonical` block. Hand-typing a different URL drifts
+  the friction away from the component the Curator should route the MR
+  against. If the offending component cannot be identified at tag time,
+  leave `canonical` empty and let `evidence:` carry the trail.
+- `severity` — `high` is reserved for blockers (e.g. agent corrupted
+  data, leaked a secret, or violated a stated guarantee). `low` is for
+  papercuts. Default `med`.
+- `suggestion` — what *you* think would fix it. Optional, but the
+  Curator weights MRs higher when one is present.
+
+#### Minimal example
+
+```text
+FRICTION: Skill prompt suggests yq merge syntax that does not exist on yq v4
+
+writer_agent: claude-code
+subcategory: yq-merge
+canonical: https://github.com/hcross/crewrig
+severity: med
+evidence:
+  - community-config/skills/architect/SKILL.md:42
+suggestion: Replace `yq m -i` with `yq eval-all '. as $i ireduce ...'`.
+```
+
+### What NOT to tag
+
+- One-off mistakes you made that the system did not actively cause —
+  those belong in your diary, not in `harness-friction`.
+- Bugs in the user's code under review — those belong in the project
+  logbook issue.
+- Missing features you wished existed — open a GitHub issue against
+  the canonical repo instead. Friction reporting is for *defects in
+  the agent system itself*, not feature requests.
+
+### Read side
+
+Reading `harness-friction` is the Curator agent's job, not the working
+agents'. If you find yourself searching this wing during normal work,
+you are off-task. The wing is write-mostly for everyone except the
+Curator.
 
 ---
 
