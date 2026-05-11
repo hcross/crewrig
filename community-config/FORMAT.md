@@ -133,6 +133,27 @@ user-invocable: true  # from claude.user-invocable (if present)
 <body>
 ```
 
+### Skill resource subfolders (`scripts/`, `references/`, `assets/`)
+
+Per the [Agent Skills spec](https://agentskills.io/specification), a
+skill may ship three optional resource subfolders alongside its
+`SKILL.md`:
+
+| Subfolder | Purpose |
+|---|---|
+| `scripts/` | Executable code the skill invokes (Python, Bash, JavaScript). |
+| `references/` | Additional documentation loaded on demand. |
+| `assets/` | Templates, fixtures, static resources. |
+
+When present in a source under `community-config/skills/<name>/`,
+these subfolders are **propagated verbatim** to both build outputs
+(`.gemini/skills/<name>/<subfolder>/...` and
+`.claude/skills/<name>/<subfolder>/...`). Executable bits are
+preserved. Skill bodies should reference resources by path relative
+to the skill root (e.g. `scripts/curate.sh`), so the same invocation
+works regardless of whether the skill lives at project level
+(`.gemini/.claude/`) or user level (`~/.gemini/`, `~/.claude/`).
+
 ### Command: `community-config/commands/<name>.md`
 
 Gemini CLI → `.gemini/commands/<name>.toml`

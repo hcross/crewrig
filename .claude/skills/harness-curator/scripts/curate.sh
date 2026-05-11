@@ -112,7 +112,7 @@ CURATE_OUT=$(env \
   THRESHOLD="$THRESHOLD" \
   TARGET_REPO_OVERRIDE="$TARGET_REPO" \
   FROM_STDIN_FILE="$STDIN_FILE" \
-  "$MEMPALACE_PYTHON" "$(dirname "$0")/lib/harness_curate.py")
+  "$MEMPALACE_PYTHON" "$(dirname "$0")/curate.py")
 
 # --- Output / apply ---
 if [ "$DRY_RUN" = true ]; then

@@ -254,19 +254,36 @@ def pick_target_repo(cluster: List[Dict[str, Any]]) -> Optional[str]:
 def cluster_date_range(cluster: List[Dict[str, Any]]) -> str:
     """Compute a "from–to" date range from `_filed_at` timestamps.
     Returns an empty string when no friction in the cluster carries a
-    timestamp (e.g. test fixture without metadata)."""
+    timestamp (e.g. test fixture without metadata). When the cluster
+    spans a single calendar day, returns "<date> (single day)" rather
+    than a bare date so a reader scanning for the arrow does not miss
+    a one-day cluster.
+
+    Logs a stderr warning when valid frictions in the cluster lack
+    `_filed_at`, since a partial-timestamp cluster yields a misleading
+    range (caller may want to investigate)."""
     dates = []
+    missing = 0
     for f in cluster:
         ts = f.get("_filed_at", "")
         if not ts:
+            missing += 1
             continue
         # filed_at is ISO 8601 (`2026-04-29T00:16:09.949576`); keep date.
         dates.append(ts.split("T", 1)[0])
+    if missing and dates:
+        cluster_key = cluster[0].get("subcategory") or cluster[0].get("_room", "?")
+        print(
+            f"Warning: cluster '{cluster_key}' has {missing} friction(s) "
+            "without `_filed_at`; date range computed from the timestamped "
+            "ones only.",
+            file=sys.stderr,
+        )
     if not dates:
         return ""
     dates.sort()
     if dates[0] == dates[-1]:
-        return dates[0]
+        return f"{dates[0]} (single day)"
     return f"{dates[0]} → {dates[-1]}"
 
 

@@ -5,6 +5,7 @@ description: "Harness feedback-loop curator. Activate on demand to read
   draft feedback MRs against the canonical/feedback repos declared in
   components' provenance blocks. Descriptive only in V0 — no auto-fix."
 type: skill
+compatibility: Requires bash, jq, and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4').
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
@@ -55,8 +56,9 @@ for bundled skill/agent scripts* for the rationale.
 
 ```bash
 task harness-curate -- --dry-run
-# or directly:
-bash scripts/harness-curate.sh --dry-run
+# or directly, from the skill bundle (works whether installed at project
+# level under .gemini/.claude or user level under ~/.gemini/~/.claude):
+bash scripts/curate.sh --dry-run
 ```
 
 The script walks `wing="harness-friction"` via the MemPalace Python
