@@ -29,5 +29,8 @@ If you find yourself producing a 2-page Context section for an ADR, the
 decision is not yet crisp. Stop, compress the context, then continue.
 
 When a recognition signal fires (see `config/TOOLS.md` →
-*Friction Reporting*), invoke the `harness-report` skill — it is the
-single canonical implementation of the tagging protocol.
+*Friction Reporting → Recognition signals*), follow the procedure in
+the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`). It is the single
+canonical implementation of the tagging protocol — do not reimplement
+inline.

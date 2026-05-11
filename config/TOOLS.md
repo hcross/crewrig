@@ -403,7 +403,8 @@ one source of truth.
 4. **Process gap.** A documented workflow step turned out to be
    missing, ambiguous, contradictory, or out of date.
 5. **Safeguard friction.** A rule or guard blocked a legitimate
-   action and forced a workaround you had to justify in prose.
+   action and forced a workaround you had to explain explicitly to
+   the user.
 
 When any signal fires, **tag the friction before resuming work** —
 not "consider tagging", not "when convenient". The fire-and-forget

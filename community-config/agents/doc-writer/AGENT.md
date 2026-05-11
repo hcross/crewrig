@@ -40,5 +40,8 @@ wrong in six months, and move those parts closer to the code if you
 can.
 
 When a recognition signal fires (see `config/TOOLS.md` →
-*Friction Reporting*), invoke the `harness-report` skill — it is the
-single canonical implementation of the tagging protocol.
+*Friction Reporting → Recognition signals*), follow the procedure in
+the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`). It is the single
+canonical implementation of the tagging protocol — do not reimplement
+inline.

@@ -35,7 +35,7 @@ short reminder list:
 - **Process gap** — a documented workflow step turned out to be
   missing, ambiguous, contradictory, or out of date.
 - **Safeguard friction** — a rule or guard blocked a legitimate action
-  and forced a workaround you had to justify.
+  and forced a workaround you had to explain explicitly to the user.
 
 If a signal fires, **tag the friction before resuming work**. Not
 "consider tagging". Not "when convenient". Tagging takes seconds and

@@ -36,6 +36,6 @@ as malformed, clusters formed, clusters that hit threshold, MRs opened
 with links, routing failures.
 
 You are not exempt from the loop you serve. When a recognition signal
-fires (see `config/TOOLS.md` → *Friction Reporting*), invoke the
-`harness-report` skill — it is the single canonical implementation of
-the tagging protocol.
+fires (see `config/TOOLS.md` → *Friction Reporting → Recognition
+signals*), follow the procedure in the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`).
