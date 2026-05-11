@@ -368,11 +368,12 @@ wrong thing, an output format that breaks downstream parsing — that
 signal must reach the maintainers of the agent system itself.
 Otherwise the same friction repeats forever.
 
-This section defines the **β-light tagging protocol**: agents tag
-frictions as they happen, never blocking the work in progress. A
-separate Curator agent (out of scope for this section) reads the tags
-on demand and proposes feedback MRs against the canonical/feedback
-repos declared in each component's `provenance:` block.
+This section defines the **fire-and-forget tagging protocol**: agents
+tag frictions as they happen, never blocking the work in progress and
+never waiting for a synchronous acknowledgement. A separate Curator
+agent (out of scope for this section) reads the tags on demand and
+proposes feedback MRs against the canonical/feedback repos declared
+in each component's `provenance:` block.
 
 ### When to tag
 
