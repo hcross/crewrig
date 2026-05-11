@@ -1,9 +1,12 @@
 #!/bin/bash
-# tests/harness/test-curate.sh — Smoke test for scripts/harness-curate.sh
+# community-config/skills/harness-curator/scripts/test.sh
+#   Smoke test for the bundled curate.sh.
 #
-# Feeds the fixture in `tests/harness/sample-frictions.json` through
-# `scripts/harness-curate.sh --from-stdin --dry-run` and asserts on the
-# JSON output. Does not touch MemPalace or `gh` — pure offline test.
+# Feeds the fixture at ../assets/sample-frictions.json through
+# `scripts/curate.sh --from-stdin --dry-run` (skill-relative paths) and
+# asserts on the JSON output. Does not touch MemPalace or `gh` — pure
+# offline test. Runs unchanged from any install location since all
+# paths are resolved relative to this script's directory.
 #
 # Exit 0 on pass, non-zero with explanation on fail.
 
@@ -129,6 +132,16 @@ HIGH=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "gh-body-trunca
 HIGH_ROOM=$(echo "$HIGH" | jq -r '.frictions[0]._room')
 assert "gh-body-truncation.frictions[0]._room" "tool" "$HIGH_ROOM"
 echo "  PASS severity:high singleton promoted to cluster"
+
+# Single-day cluster: gh-body-truncation has 1 friction with one date —
+# body should render the "(single day)" form, not a bare date.
+HIGH_BODY=$(echo "$HIGH" | jq -r '.body')
+echo "$HIGH_BODY" | grep -q "2026-05-09 (single day)" || {
+  echo "FAIL: gh-body-truncation body missing single-day marker" >&2
+  echo "$HIGH_BODY" >&2
+  exit 1
+}
+echo "  PASS gh-body-truncation.body uses '(single day)' format"
 
 # Parked singleton is NOT in the clusters output.
 PARKED=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "parked-singleton")')
