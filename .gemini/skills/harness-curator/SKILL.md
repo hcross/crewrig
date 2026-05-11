@@ -122,6 +122,31 @@ A cluster with no resolvable `canonical:` and no `--target-repo`
 override counts as a *routing failure* — surfaced in the stats, not
 opened blind.
 
+### Prerequisite: labels exist on the target repo
+
+`gh issue create --label <name>` fails if the label does not already
+exist on the target repo. The three labels the Curator uses
+(`harness-feedback`, `room:<category>` for each of the 5 fixed rooms,
+and `severity:low|med|high`) **must be pre-created** on every repo
+that may receive curator output, before the first `--apply` run.
+A fork maintainer typically does this once at fork setup time.
+
+Recommended creation script (run once per target repo):
+
+```bash
+gh label create harness-feedback --color FBCA04 --description "Auto-curated friction report"
+for room in tool prompt format behavior process; do
+  gh label create "room:$room" --color 0E8A16 --description "Friction category: $room"
+done
+for sev in low med high; do
+  gh label create "severity:$sev" --color "$(test "$sev" = high && echo D93F0B || test "$sev" = med && echo FBCA04 || echo C2E0C6)" --description "Friction severity: $sev"
+done
+```
+
+If `--apply` fails on a missing label, the script surfaces it as a
+`failures:` entry in the run summary. The maintainer creates the
+label and retries.
+
 `--deep` mode (sweep `wing="transcripts"` for unflagged friction
 patterns) is **out of V0 scope** — tracked in issue #43. Auto mode is
 tracked in issue #42.

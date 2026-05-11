@@ -98,8 +98,6 @@ command -v "$MEMPALACE_PYTHON" >/dev/null 2>&1 || {
 }
 
 # --- Run the curator ---
-TODAY=$(date +%Y-%m-%d)
-
 # Read stdin into a tempfile if applicable so the python heredoc can re-open
 # it; passing stdin straight to the heredoc works on bash but fails when the
 # script is sourced or run under unusual launchers.
@@ -112,7 +110,6 @@ fi
 
 CURATE_OUT=$(env \
   FRICTION_WING="harness-friction" \
-  TODAY="$TODAY" \
   THRESHOLD="$THRESHOLD" \
   TARGET_REPO_OVERRIDE="$TARGET_REPO" \
   FROM_STDIN_FILE="$STDIN_FILE" \

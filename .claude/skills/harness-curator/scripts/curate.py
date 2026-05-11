@@ -37,9 +37,8 @@ Output JSON schema (stable, depended on by ``scripts/harness-curate.sh``):
 Environment variables (set by the bash wrapper):
 
 * ``FRICTION_WING`` — wing name to read from (default ``harness-friction``).
-* ``TODAY`` — date string for branch naming (``YYYY-MM-DD``).
-* ``THRESHOLD`` — minimum cluster size to propose an MR.
-* ``TARGET_REPO_OVERRIDE`` — force a single MR target (test mode).
+* ``THRESHOLD`` — minimum cluster size to propose an issue.
+* ``TARGET_REPO_OVERRIDE`` — force a single issue target (test mode).
 * ``FROM_STDIN_FILE`` — path to a JSON file with a list of fake drawers,
   used for ``--from-stdin``. Empty when reading from MemPalace.
 """
@@ -54,7 +53,6 @@ from typing import Any, Dict, List, Optional, Tuple
 # --- Configuration from environment ---------------------------------------
 
 WING = os.environ.get("FRICTION_WING", "harness-friction")
-TODAY = os.environ.get("TODAY", "")
 THRESHOLD = int(os.environ.get("THRESHOLD", "2"))
 TARGET_OVERRIDE = os.environ.get("TARGET_REPO_OVERRIDE", "").strip()
 STDIN_FILE = os.environ.get("FROM_STDIN_FILE", "").strip()
