@@ -118,20 +118,24 @@ echo "$YQ_BODY" | grep -q "2026-05-08 → 2026-05-10" || {
 }
 echo "  PASS yq-merge.body contains date range"
 
-# Branch name follows the harness/<slug>-<date> shape.
-YQ_BRANCH=$(echo "$YQ" | jq -r '.branch_name')
-[[ "$YQ_BRANCH" =~ ^harness/yq-merge-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || {
-  echo "FAIL: yq-merge.branch_name unexpected: '$YQ_BRANCH'" >&2
-  exit 1
-}
-echo "  PASS yq-merge.branch_name format"
+# Labels: three-tuple ["harness-feedback", "room:<dominant>", "severity:<worst>"].
+YQ_LABELS=$(echo "$YQ" | jq -c '.labels')
+assert "yq-merge.labels" '["harness-feedback","room:prompt","severity:med"]' "$YQ_LABELS"
 
-# High-severity singleton bypass produced its own MR; room is "tool".
+# No branch_name field anymore — V0 opens issues, not MRs.
+YQ_HAS_BRANCH=$(echo "$YQ" | jq 'has("branch_name")')
+assert "yq-merge.has(branch_name)" "false" "$YQ_HAS_BRANCH"
+
+# High-severity singleton bypass produced its own cluster; room is "tool".
 HIGH=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "gh-body-truncation")')
 [ -n "$HIGH" ] || { echo "FAIL: severity:high singleton not promoted" >&2; exit 1; }
 HIGH_ROOM=$(echo "$HIGH" | jq -r '.frictions[0]._room')
 assert "gh-body-truncation.frictions[0]._room" "tool" "$HIGH_ROOM"
 echo "  PASS severity:high singleton promoted to cluster"
+
+# severity:high label propagates on the high-severity cluster.
+HIGH_LABELS=$(echo "$HIGH" | jq -c '.labels')
+assert "gh-body-truncation.labels" '["harness-feedback","room:tool","severity:high"]' "$HIGH_LABELS"
 
 # Single-day cluster: gh-body-truncation has 1 friction with one date —
 # body should render the "(single day)" form, not a bare date.
