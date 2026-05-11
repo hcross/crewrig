@@ -84,9 +84,8 @@ not been thought through yet.
 
 ## Friction reporting
 
-If the architecture skill itself led you down a wrong path (e.g. forced
-a heavyweight ADR on a trivial change, or missed a blast-radius
-dimension), tag it per `config/TOOLS.md` → *Friction Reporting*.
-
-Use `room="prompt"` (the prompt was misleading) or `room="process"`
-(the workflow itself has a gap).
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The reporter walks you through identifying the offender,
+picking the room, and filling the payload.

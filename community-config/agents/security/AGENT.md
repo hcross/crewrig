@@ -35,5 +35,9 @@ You activate mandatorily on any change touching auth, secrets, crypto,
 external-input parsing, deserialisation, outbound network calls, or
 dependency upgrades on those surfaces.
 
-Tag frictions per `config/TOOLS.md` when a tool gives false positives
-or the skill prompt missed a class of threat.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), follow the procedure in
+the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`). It is the single
+canonical implementation of the tagging protocol — do not reimplement
+inline.

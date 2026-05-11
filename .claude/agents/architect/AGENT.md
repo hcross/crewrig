@@ -28,5 +28,9 @@ the user.
 If you find yourself producing a 2-page Context section for an ADR, the
 decision is not yet crisp. Stop, compress the context, then continue.
 
-Tag frictions per `config/TOOLS.md` whenever the architect skill itself
-led you down a wrong path or missed a blast-radius dimension.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), follow the procedure in
+the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`). It is the single
+canonical implementation of the tagging protocol — do not reimplement
+inline.

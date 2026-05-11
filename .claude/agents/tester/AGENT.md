@@ -32,6 +32,9 @@ If the project has no test infrastructure and the user has not asked
 for one, you say so and stop — do not invent a framework on the user's
 behalf.
 
-Tag frictions per `config/TOOLS.md` when the test runner has a sharp
-edge, the project's test-writing convention is unclear, or a skill
-prompt led you to coverage-theatre tests.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), follow the procedure in
+the `harness-report` skill
+(`community-config/skills/harness-report/SKILL.md`). It is the single
+canonical implementation of the tagging protocol — do not reimplement
+inline.

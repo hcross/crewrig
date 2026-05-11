@@ -116,11 +116,8 @@ When asked to review a dependency upgrade:
 
 ## Friction reporting
 
-Tag frictions per `config/TOOLS.md` → *Friction Reporting* when:
-
-- A security tool gave a false positive that wasted review cycles
-  (`room="tool"`).
-- The skill prompt missed a class of threat that surfaced anyway
-  (`room="prompt"`).
-- A project process step (e.g. dependency upgrade workflow) skipped a
-  required check (`room="process"`).
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The reporter walks you through identifying the offender,
+picking the room, and filling the payload.

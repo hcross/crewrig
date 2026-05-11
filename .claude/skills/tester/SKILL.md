@@ -109,11 +109,8 @@ A test that never failed before the fix proves nothing.
 
 ## Friction reporting
 
-Tag per `config/TOOLS.md` → *Friction Reporting* when:
-
-- A test framework / runner has a sharp edge that wasted time
-  (`room="tool"`).
-- The project's test-writing convention is unclear or contradictory
-  (`room="process"`).
-- A skill prompt led you to write coverage-theatre tests
-  (`room="prompt"`).
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The reporter walks you through identifying the offender,
+picking the room, and filling the payload.

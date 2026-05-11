@@ -140,9 +140,8 @@ Standalone docs that drift silently are worse than no docs.
 
 ## Friction reporting
 
-Tag per `config/TOOLS.md` → *Friction Reporting* when:
-
-- A doc template (ADR, README scaffold) was contradictory or out of
-  date (`room="process"`).
-- The skill produced a doc the user had to substantially rewrite
-  (`room="prompt"` or `room="format"`).
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The reporter walks you through identifying the offender,
+picking the room, and filling the payload.
