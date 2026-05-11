@@ -8,7 +8,7 @@ type: skill
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+  version: "1.0.2"
 claude:
   allowed-tools:
     - Read
@@ -112,10 +112,12 @@ Co-authored-by lines, if any.
 
 Do not paste the entire PR description. The commit message is denser.
 
-### 6. Skill / agent source changes require a version bump
+## Cross-cutting: skill / agent source version bumps
 
-Any PR that touches a `community-config/skills/*/SKILL.md` or
-`community-config/agents/*/AGENT.md` source MUST bump
+This is not a step in the composition lifecycle — it is a *rule*
+that applies to any PR you compose whose diff touches a
+`community-config/skills/*/SKILL.md` or
+`community-config/agents/*/AGENT.md` source. The PR MUST bump
 `provenance.version` in the same diff. The rule is enforced by
 `scripts/check-skill-versions.sh` in CI (and locally via
 `task check-skill-versions`).

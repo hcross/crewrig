@@ -9,8 +9,11 @@
 # Usage:
 #   bash scripts/check-skill-versions.sh [<base-ref>]
 #
-# Default base ref: origin/release/crew-v0 (CI passes BASE_REF env var
-# pointing at the PR base, typically `origin/<base-branch>`).
+# Default base ref: origin/release/crew-v0. CI passes BASE_REF env var
+# pointing at the PR's *target* branch (`base.ref` in GitHub Actions
+# context) — NOT the PR's source/head branch. The guard diffs the PR
+# against what it's about to merge into, so changes that haven't yet
+# landed in the base are subject to the bump rule.
 #
 # Exits 0 if all changed sources include a version bump, non-zero (with a
 # per-file failure list) otherwise.
@@ -31,8 +34,14 @@ if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
   }
 fi
 
-# Collect changed skill/agent sources.
-mapfile -t changed < <(git diff --name-only "$BASE_REF" -- \
+# Collect changed skill/agent sources. `while read` rather than
+# `mapfile` for bash 3.2 compatibility (macOS default — `mapfile` is a
+# bash 4.0+ builtin).
+changed=()
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  changed+=("$line")
+done < <(git diff --name-only "$BASE_REF" -- \
   'community-config/skills/*/SKILL.md' \
   'community-config/agents/*/AGENT.md' 2>/dev/null || true)
 
@@ -45,7 +54,6 @@ echo "Checking version bumps on ${#changed[@]} changed skill/agent source(s)..."
 
 failures=()
 for f in "${changed[@]}"; do
-  [ -z "$f" ] && continue
   [ ! -f "$f" ] && continue  # deleted file: skip (deletions don't need a bump)
 
   # Look at the diff for a `version:` line addition. The provenance.version
