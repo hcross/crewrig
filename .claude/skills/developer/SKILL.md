@@ -88,11 +88,8 @@ independent — serialise them.
 
 ## Friction reporting
 
-Tag frictions per `config/TOOLS.md` → *Friction Reporting* whenever:
-
-- A skill prompt led you to a wrong implementation path
-  (`room="prompt"`).
-- A tool produced surprising or inconsistent behaviour
-  (`room="tool"`).
-- A documented step in the project's workflow is missing or ambiguous
-  (`room="process"`).
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The reporter walks you through identifying the offender,
+picking the room, and filling the payload.

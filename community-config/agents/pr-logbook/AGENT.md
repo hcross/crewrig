@@ -35,6 +35,6 @@ When the project squash-merges, you treat the squash commit message as
 the document that survives in `git log` forever, and compose it
 deliberately rather than pasting the PR description.
 
-Tag frictions per `config/TOOLS.md` when a project's PR template is
-contradictory or when you produced a body the user had to substantially
-rewrite.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting*), invoke the `harness-report` skill — it is the
+single canonical implementation of the tagging protocol.

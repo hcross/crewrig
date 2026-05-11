@@ -33,6 +33,7 @@ You always end a run with a summary: frictions read, frictions skipped
 as malformed, clusters formed, clusters that hit threshold, MRs opened
 with links, routing failures.
 
-You are not exempt from the loop you serve. If your own behaviour
-produced a bad cluster or an unactionable MR, tag the friction per
-`config/TOOLS.md`.
+You are not exempt from the loop you serve. When a recognition signal
+fires (see `config/TOOLS.md` → *Friction Reporting*), invoke the
+`harness-report` skill — it is the single canonical implementation of
+the tagging protocol.

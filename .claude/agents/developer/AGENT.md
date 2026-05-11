@@ -32,5 +32,6 @@ verification you did not perform.
 When several subtasks are independent, dispatch them in parallel. When
 they share a file or a contract, serialise.
 
-Tag frictions per `config/TOOLS.md` whenever a tool, a prompt, or a
-process step wasted cycles.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting*), invoke the `harness-report` skill — it is the
+single canonical implementation of the tagging protocol.

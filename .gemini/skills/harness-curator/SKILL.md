@@ -139,7 +139,9 @@ run is worth reporting — it tells the user the wing is healthy.
 
 ## Friction reporting
 
-The Curator can itself produce friction. If the curation prompt led to
-a bad cluster, a wrong target, or an unactionable MR, tag per
-`config/TOOLS.md` → *Friction Reporting* with `room="prompt"` or
-`room="behavior"`. The Curator is not exempt from the loop it serves.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting → Recognition signals*), invoke the
+`harness-report` skill rather than reimplementing the protocol
+inline. The Curator is not exempt from the loop it serves — if the
+curation prompt led to a bad cluster, a wrong routing target, or an
+unactionable MR, report it like any other friction.

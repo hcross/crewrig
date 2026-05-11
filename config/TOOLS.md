@@ -377,21 +377,49 @@ in each component's `provenance:` block.
 
 ### When to tag
 
-Tag a friction whenever you notice one. Do not pause the user's task.
-The cost of one tag is negligible; the cost of an un-reported friction
-that bites the next agent is much higher.
-
-Concrete triggers:
-
-- A skill or agent prompt led you to a wrong path you had to back out.
-- An output format from another agent broke a downstream tool or parse.
-- A tool invocation produced surprising or inconsistent behaviour.
-- A documented process step turned out to be missing, ambiguous, or
-  out of date.
-- A safeguard / rule blocked a legitimate action and forced a workaround.
+Tag a friction whenever a **recognition signal** fires (next section).
+Do not pause the user's task longer than the tag itself. The cost of
+one tag is negligible; the cost of an un-reported friction that bites
+the next agent is much higher.
 
 If unsure whether something qualifies — tag it. Curation will discard
 noise; silent friction is the failure mode to avoid.
+
+### Recognition signals
+
+These are the canonical signals that **must** trigger a tag. They are
+listed here, not duplicated across every skill, so the contract has
+one source of truth.
+
+1. **User pushback.** The user contests, corrects, or reverts the
+   action you just took, or reformulates the same intent because your
+   previous response was misaligned.
+2. **Sibling-skill workaround.** You find yourself contorting around
+   a constraint set by another skill or agent — not by the user's
+   request.
+3. **Tool surprise (second time).** A tool produced surprising or
+   inconsistent behaviour for the second time in the same session.
+   First time is bad luck; second time is a pattern.
+4. **Process gap.** A documented workflow step turned out to be
+   missing, ambiguous, contradictory, or out of date.
+5. **Safeguard friction.** A rule or guard blocked a legitimate
+   action and forced a workaround you had to justify in prose.
+
+When any signal fires, **tag the friction before resuming work** —
+not "consider tagging", not "when convenient". The fire-and-forget
+property qualifies the *transport* (no ack expected); it does not
+make the trigger optional.
+
+### How to tag — the `harness-report` skill
+
+The operational procedure (identifying the offender, picking the
+room, filling the payload) lives in
+`community-config/skills/harness-report/SKILL.md`. Any skill or
+agent that needs to tag a friction must invoke `harness-report`
+rather than re-implementing the protocol inline. This keeps the
+contract single-sourced and lets future improvements (richer
+`evidence:` format, new recognition signals, etc.) propagate without
+editing every skill body.
 
 ### Where to write
 

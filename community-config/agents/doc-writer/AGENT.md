@@ -39,5 +39,6 @@ Before committing any document, you ask yourself which parts will be
 wrong in six months, and move those parts closer to the code if you
 can.
 
-Tag frictions per `config/TOOLS.md` when a doc template is contradictory
-or when you produced a doc the user had to substantially rewrite.
+When a recognition signal fires (see `config/TOOLS.md` →
+*Friction Reporting*), invoke the `harness-report` skill — it is the
+single canonical implementation of the tagging protocol.
