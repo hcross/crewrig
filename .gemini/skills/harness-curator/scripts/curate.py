@@ -50,6 +50,15 @@ import sys
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
+# Dup fd 1 BEFORE any mempalace.mcp_server import (which happens lazily
+# inside read_from_mempalace, but the dup must precede the interpreter's
+# first chance to be hijacked — so we do it at module load). The
+# mempalace MCP module swaps sys.stdout to keep its JSON-RPC channel
+# clean; we route our JSON output through a duped handle to survive
+# that swap. `closefd=False` is load-bearing: without it, fd 1 closes
+# at GC and any late `atexit` write breaks.
+_REAL_STDOUT = os.fdopen(os.dup(1), "w", encoding="utf-8", closefd=False)
+
 # --- Configuration from environment ---------------------------------------
 
 WING = os.environ.get("FRICTION_WING", "harness-friction")
@@ -445,11 +454,12 @@ def main() -> int:
 
     json.dump(
         {"stats": stats, "clusters": output_clusters},
-        sys.stdout,
+        _REAL_STDOUT,
         indent=2,
         ensure_ascii=False,
     )
-    sys.stdout.write("\n")
+    _REAL_STDOUT.write("\n")
+    _REAL_STDOUT.flush()
     return 0
 
 
