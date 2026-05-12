@@ -212,5 +212,117 @@ echo "$EMPTY_OUT" | grep -q "No clusters above threshold; no issues to open." ||
 }
 echo "  PASS apply --dry-run-apply emits no-clusters notice"
 
+# --- Regression: real MemPalace path (no --from-stdin) -------------------
+# This section guards the curate-stdout-hijack bug (issue #62): when
+# curate.py reads from MemPalace, importing `mempalace.mcp_server` swaps
+# `sys.stdout` to keep the JSON-RPC channel clean, hijacking our JSON
+# output. The production fix dups fd 1 with `closefd=False` BEFORE the
+# import. The pre-existing 31 assertions all run through --from-stdin
+# and therefore never exercise the mempalace import path — so they
+# could not catch this bug.
+#
+# Gating: this test runs only when both the mempalace CLI and the
+# `mempalace.mcp_server` Python module are importable. Otherwise it
+# SKIPs (does not fail) — keeps the suite usable on hosts where the
+# curator is being developed without a local mempalace install.
+
+# Resolve a Python that has `mempalace` available. Mirrors the
+# auto-detect logic in curate.sh so the probe and the run use the same
+# interpreter. Honors a pre-set MEMPALACE_PYTHON if the caller exports
+# one.
+auto_detect_mp_python() {
+  if command -v pipx >/dev/null 2>&1; then
+    local pipx_venv
+    pipx_venv=$(pipx environment --value PIPX_HOME 2>/dev/null)/venvs/mempalace
+    if [ -x "$pipx_venv/bin/python3" ]; then
+      echo "$pipx_venv/bin/python3"
+      return 0
+    fi
+  fi
+  echo "python3"
+}
+MEMPALACE_PYTHON="${MEMPALACE_PYTHON:-$(auto_detect_mp_python)}"
+
+if ! command -v mempalace >/dev/null 2>&1 || \
+   ! "$MEMPALACE_PYTHON" -c "import mempalace.mcp_server" >/dev/null 2>&1; then
+  echo "  SKIP test_from_mempalace_real: mempalace not installed"
+else
+  # Hermetic palace: MEMPALACE_PALACE_PATH is the env var actually
+  # consulted by mempalace.config (despite the v3.3.x docs sometimes
+  # referring to it as MEMPALACE_HOME). Pointing it at a fresh tmpdir
+  # gives us a one-drawer palace that cannot contaminate the user's
+  # real ~/.mempalace store.
+  tmpdir=$(mktemp -d -t crewrig-curate-real.XXXXXX)
+  # Chain cleanup onto any pre-existing trap (curate.sh installs its
+  # own EXIT trap inside --from-stdin runs, but test.sh itself has
+  # none yet — this is defensive).
+  trap 'rm -rf "$tmpdir"' EXIT
+  export MEMPALACE_PALACE_PATH="$tmpdir"
+
+  # Seed exactly one drawer that qualifies as a singleton via the
+  # severity:high bypass. Title prefix and the writer_agent / evidence
+  # keys mirror the schema in assets/sample-frictions.json.
+  "$MEMPALACE_PYTHON" - <<'PY'
+from mempalace.mcp_server import tool_add_drawer
+tool_add_drawer(
+    wing="harness-friction",
+    room="tool",
+    content=(
+        "FRICTION: regression probe for curate-stdout-hijack\n\n"
+        "writer_agent: test-runner\n"
+        "subcategory: real-mempalace-smoke\n"
+        "canonical: https://github.com/hcross/crewrig\n"
+        "severity: high\n"
+        "evidence:\n"
+        "  - community-config/skills/harness-curator/scripts/curate.py:60\n"
+    ),
+)
+PY
+
+  # Run curate.sh with NO --from-stdin so the real read_from_mempalace
+  # path executes. Split stdout / stderr — mempalace chatter on stderr
+  # is permitted, stdout MUST contain the JSON.
+  set +e
+  bash "$SCRIPT" --dry-run >"$tmpdir/out.json" 2>"$tmpdir/err.log"
+  REAL_RC=$?
+  set -e
+  assert "test_real exit code" "0" "$REAL_RC"
+
+  # Primary symptom of the bug: stdout was empty because the JSON went
+  # to a closed fd. Size > 0 is the cheapest possible regression check.
+  REAL_SIZE=$(wc -c < "$tmpdir/out.json" | tr -d ' ')
+  if [ "$REAL_SIZE" -le 0 ]; then
+    echo "FAIL test_real.stdout is non-empty — got $REAL_SIZE bytes" >&2
+    echo "--- stderr ---" >&2
+    cat "$tmpdir/err.log" >&2
+    exit 1
+  fi
+  echo "  PASS test_real.stdout is non-empty ($REAL_SIZE bytes)"
+
+  # Parses as JSON — guards the case where stdout contains garbage
+  # rather than nothing (e.g. mixed mempalace logs).
+  if ! "$MEMPALACE_PYTHON" -c \
+      "import json,sys; json.load(open('$tmpdir/out.json'))" \
+      >/dev/null 2>&1; then
+    echo "FAIL test_real.stdout parses as JSON" >&2
+    echo "--- stdout ---" >&2
+    cat "$tmpdir/out.json" >&2
+    echo "--- stderr ---" >&2
+    cat "$tmpdir/err.log" >&2
+    exit 1
+  fi
+  echo "  PASS test_real.stdout parses as JSON"
+
+  REAL_OUT=$(cat "$tmpdir/out.json")
+  assert "test_real.stats.total_drawers"  "1" \
+    "$(echo "$REAL_OUT" | jq -r '.stats.total_drawers')"
+  assert "test_real.stats.valid_frictions" "1" \
+    "$(echo "$REAL_OUT" | jq -r '.stats.valid_frictions')"
+  assert "test_real.clusters_above_threshold" "1" \
+    "$(echo "$REAL_OUT" | jq -r '.stats.clusters_above_threshold')"
+  assert "test_real.cluster_key" "real-mempalace-smoke" \
+    "$(echo "$REAL_OUT" | jq -r '.clusters[0].cluster_key')"
+fi
+
 echo ""
 echo "OK: harness-curate smoke test passed."

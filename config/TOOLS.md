@@ -94,6 +94,26 @@ storage, a temporal knowledge graph, semantic search, and an agent diary.
 > the canonical user of this carve-out: it batch-reads the
 > `harness-friction` wing, which a per-drawer MCP loop would turn into
 > a multi-thousand-call traversal.
+>
+> **Stdout hazard.** `mempalace.mcp_server` swaps `sys.stdout` at import
+> time to protect its own JSON-RPC channel from accidental pollution.
+> Any bundled script that imports from it AND needs to write structured
+> output to its own stdout (e.g. to be piped to another tool) must dup
+> fd 1 **before** the import — even when the import is function-local,
+> route every later print through the duped handle to be safe:
+>
+> ```python
+> import os, sys
+> _REAL_STDOUT = os.fdopen(os.dup(1), "w", encoding="utf-8", closefd=False)
+> # ... later, inside a function ...
+> from mempalace.mcp_server import tool_get_drawer  # safe: stdout already duped
+> # ... write JSON through _REAL_STDOUT, not sys.stdout
+> ```
+>
+> `closefd=False` is required so the duped fd survives interpreter
+> shutdown; without it, fd 1 closes at GC and any late `atexit` write
+> breaks. The Harness Curator's `curate.py` is the reference
+> implementation.
 
 ### Palace Structure Conventions
 
