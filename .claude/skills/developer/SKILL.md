@@ -12,7 +12,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 
@@ -64,6 +64,14 @@ Before reporting a task as done, run:
 - The narrowest type-check / lint that covers the change.
 - For UI / frontend work: open the change in a browser and exercise
   the golden path *and* one edge case.
+- For changes to bundled-script source files (any file under
+  `community-config/skills/<name>/scripts/` or
+  `community-config/agents/<name>/scripts/`): run
+  `bash scripts/build-components.sh` to regenerate the `.gemini/` and
+  `.claude/` mirrors, stage them in the same commit, then run
+  `bash scripts/build-components.sh --check` to confirm drift-free.
+  This is non-optional — the CI `check-components` job rejects PRs
+  where source and bundles disagree.
 
 If the project has no test or type-check infrastructure, say so
 explicitly in the report — do not claim verification you did not do.
