@@ -16,6 +16,7 @@ Output JSON schema (stable, depended on by ``scripts/harness-curate.sh``):
         "total_drawers": int,
         "valid_frictions": int,
         "skipped_malformed": int,
+        "skipped_resolved": int,
         "clusters_formed": int,
         "clusters_above_threshold": int,
         "clusters_parked": int,
@@ -82,11 +83,22 @@ KV_RE = re.compile(r"^([a-z_][a-z0-9_]*):\s*(.*)$")
 LIST_RE = re.compile(r"^\s*-\s+(.+)$")
 
 
-def parse_friction(content: str) -> Optional[Dict[str, Any]]:
-    """Parse one FRICTION: payload. Return None if required fields are
-    missing — the caller treats None as "skip as malformed"."""
+def parse_friction(content: str) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Parse one FRICTION: payload.
+
+    Returns ``(payload, reason)``:
+      * ``(dict, "ok")``  — well-formed and still open (no ``opened_as:``).
+      * ``(None, "resolved")`` — well-formed but already correlated with a
+        GitHub issue (carries ``opened_as: <url>``). Caller skips silently
+        so the curator does not re-open issues for drawers that already
+        have one (issue #69).
+      * ``(None, "malformed")`` — missing required fields or no title.
+
+    The schema co-evolves with ``config/TOOLS.md``: ``opened_as`` is the
+    correlation field stamped on each drawer by ``apply.py`` after a
+    successful ``gh issue create``."""
     if not content:
-        return None
+        return None, "malformed"
     lines = content.splitlines()
     title = None
     body_start = 0
@@ -96,12 +108,12 @@ def parse_friction(content: str) -> Optional[Dict[str, Any]]:
             continue
         m = TITLE_RE.match(line.strip())
         if not m:
-            return None
+            return None, "malformed"
         title = m.group(1).strip()
         body_start = i + 1
         break
     if title is None:
-        return None
+        return None, "malformed"
 
     out: Dict[str, Any] = {"title": title, "evidence": []}
     in_evidence = False
@@ -129,12 +141,18 @@ def parse_friction(content: str) -> Optional[Dict[str, Any]]:
 
     # Required fields per config/TOOLS.md: writer_agent + ≥1 evidence.
     if not out.get("writer_agent"):
-        return None
+        return None, "malformed"
     if not out["evidence"]:
-        return None
+        return None, "malformed"
     # Default severity if absent.
     out.setdefault("severity", "med")
-    return out
+    # Skip drawers already correlated with an open/closed issue: the
+    # write-back stamp from apply.py (issue #69). We treat any truthy
+    # `opened_as` value as a resolved correlation — even if it's not a
+    # valid URL, the curator's job is just to avoid re-opening.
+    if out.get("opened_as"):
+        return None, "resolved"
+    return out, "ok"
 
 
 # --- Data sources ---------------------------------------------------------
@@ -205,17 +223,19 @@ def cluster_key_for(friction: Dict[str, Any], room: str) -> str:
 
 
 def cluster_frictions(
-    parsed: List[Tuple[Dict[str, Any], str, str]],
+    parsed: List[Tuple[Dict[str, Any], str, str, str]],
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Group parsed frictions by cluster key. Each value entry stores the
-    friction with its room and filed_at glued in for downstream
-    traceability and for date-range computation in the MR body."""
+    friction with its room, filed_at and drawer_id glued in for downstream
+    traceability, date-range computation in the MR body, and post-create
+    write-back of the ``opened_as`` correlation field (issue #69)."""
     clusters: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for friction, room, filed_at in parsed:
+    for friction, room, filed_at, drawer_id in parsed:
         key = cluster_key_for(friction, room)
         enriched = dict(friction)
         enriched["_room"] = room
         enriched["_filed_at"] = filed_at
+        enriched["_drawer_id"] = drawer_id
         clusters[key].append(enriched)
     return dict(clusters)
 
@@ -410,22 +430,27 @@ def main() -> int:
         "total_drawers": len(drawers),
         "valid_frictions": 0,
         "skipped_malformed": 0,
+        "skipped_resolved": 0,
         "clusters_formed": 0,
         "clusters_above_threshold": 0,
         "clusters_parked": 0,
         "routing_failures": 0,
     }
 
-    parsed: List[Tuple[Dict[str, Any], str, str]] = []
+    parsed: List[Tuple[Dict[str, Any], str, str, str]] = []
     for drawer in drawers:
         content = drawer.get("content", "")
         room = drawer.get("room", "")
         filed_at = drawer.get("filed_at", "")
-        friction = parse_friction(content)
+        drawer_id = drawer.get("drawer_id", "")
+        friction, reason = parse_friction(content)
         if friction is None:
-            stats["skipped_malformed"] += 1
+            if reason == "resolved":
+                stats["skipped_resolved"] += 1
+            else:
+                stats["skipped_malformed"] += 1
             continue
-        parsed.append((friction, room, filed_at))
+        parsed.append((friction, room, filed_at, drawer_id))
         stats["valid_frictions"] += 1
 
     clusters = cluster_frictions(parsed)

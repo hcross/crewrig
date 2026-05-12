@@ -53,7 +53,25 @@ def main() -> int:
     if args.dry_run_apply:
         for c in clusters:
             print(json.dumps(_build_cmd(c)))
+            # Issue #69: surface the drawers that would receive the
+            # `opened_as` correlation stamp. Object shape (not array) so
+            # existing argv-array assertions (`grep '^\['`) ignore it.
+            drawer_ids = [
+                fr.get("_drawer_id", "")
+                for fr in c.get("frictions", [])
+                if fr.get("_drawer_id")
+            ]
+            print(json.dumps({
+                "would_update_drawers": drawer_ids,
+                "cluster_key": c["cluster_key"],
+            }))
         return 0
+
+    # Lazy import: only the real --apply path needs mempalace MCP. The
+    # dry-run path above must stay import-free (curate.py owns the
+    # stdout-hijack workaround at module load — apply.py runs as a
+    # standalone process and would inherit no such protection).
+    from mempalace.mcp_server import tool_get_drawer, tool_update_drawer
 
     opened = []
     failures = []
@@ -64,7 +82,27 @@ def main() -> int:
         cmd = _build_cmd(c)
         try:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            opened.append({"cluster": c["cluster_key"], "url": result.stdout.strip()})
+            url = result.stdout.strip()
+            opened.append({"cluster": c["cluster_key"], "url": url})
+            # Write-back: stamp `opened_as: <url>` on every drawer that
+            # contributed to the cluster (issue #69). Re-fetch then
+            # update because tool_update_drawer REPLACES content; this
+            # narrows the clobber window against concurrent edits.
+            # Partial failures are logged but do NOT mark the cluster
+            # failed — the issue is already opened on GitHub.
+            for fr in c.get("frictions", []):
+                did = fr.get("_drawer_id")
+                if not did:
+                    continue
+                try:
+                    drawer = tool_get_drawer(drawer_id=did)
+                    new_content = drawer["content"].rstrip() + f"\nopened_as: {url}\n"
+                    tool_update_drawer(drawer_id=did, content=new_content)
+                except Exception as wb_err:  # noqa: BLE001 — best-effort write-back
+                    print(
+                        f"  warn: failed to stamp opened_as on drawer {did}: {wb_err}",
+                        file=sys.stderr,
+                    )
         except subprocess.CalledProcessError as e:
             failures.append({"cluster": c["cluster_key"], "error": e.stderr.strip()})
 
