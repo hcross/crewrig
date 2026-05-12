@@ -8,7 +8,7 @@ type: skill
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.2"
+  version: "1.0.3"
 claude:
   allowed-tools:
     - Read
@@ -134,6 +134,28 @@ SemVer applies:
 A "version-only bump" PR is not a thing — the version bump always
 accompanies the content edit. See `community-config/FORMAT.md` →
 *Version semantics* for the contract.
+
+## Grounding discipline
+
+PR bodies, logbook entries, and squash commit messages compose under
+narrative pressure — the temptation is to produce a fluent paragraph that
+*sounds* like a faithful summary. Plausible-sounding detail is the failure
+mode, not vague writing.
+
+**Hard rule.** Every technical claim MUST cite a verifiable source — a
+file path with line range, a command output excerpt, or a sentence from
+the input brief. This applies to file counts, line counts, assertion
+lists, pass-count deltas, exit codes, CI step names, and build-system
+invariants (e.g. "content-addressed", "drift-free", "idempotent"). If you
+cannot cite, write "see diff" or omit the claim. Do not estimate, round,
+or generalise.
+
+**Self-check before returning.** Re-read the draft once. Mark every
+number, list-count, named invariant, and concrete technical assertion.
+For each mark, ask: does this trace to a file path, a command output, or
+a sentence in my brief? If no, delete it or replace it with "see diff".
+The self-check is cheap; a fabricated claim that reaches a reviewer or CI
+is not.
 
 ## Output expectations
 
