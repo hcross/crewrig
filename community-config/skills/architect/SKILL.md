@@ -8,7 +8,7 @@ type: skill
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+  version: "1.0.1"
 claude:
   allowed-tools:
     - Read
@@ -91,6 +91,31 @@ neither — do not over-document.
 ADRs follow the standard sections: Context, Decision, Status, Consequences.
 Keep each section under 10 lines. ADRs that need a 2-page Context have
 not been thought through yet.
+
+## Grounding discipline
+
+Architect output composes under narrative pressure — ADRs, RFCs, and
+ripple-effect analyses reward fluent prose, and fluent prose rewards
+plausible-sounding detail. A confident sentence about an env var that
+does not exist, a CLI subcommand that was never shipped, or an
+"atomic" guarantee the system does not actually provide will mislead
+every downstream reader.
+
+**Hard rule.** Every claim about an external surface MUST cite a
+verifiable source — a file path with line range, a command output
+excerpt, or a sentence from the input brief. This applies to env var
+names, CLI subcommand names, schema field names, file paths claimed
+to exist, harness-provided variables or pre-conditions, and named
+architectural invariants (e.g. "atomic", "idempotent", "stateless",
+"content-addressed", "drift-free"). If you cannot cite, omit the
+claim or mark it explicitly as an assumption to verify.
+
+**Self-check before returning.** Re-read the draft once. Mark every
+named external surface and every named invariant. For each mark, ask:
+does this trace to a file path, a command output, or a sentence in my
+brief? If no, delete it or downgrade it to "assumption — verify
+before relying on this". The self-check is cheap; an ADR that
+recommends a design around a non-existent surface is not.
 
 ## Friction reporting
 
