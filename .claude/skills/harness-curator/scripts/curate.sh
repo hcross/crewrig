@@ -98,9 +98,11 @@ command -v "$MEMPALACE_PYTHON" >/dev/null 2>&1 || {
 }
 
 # --- Run the curator ---
-# Read stdin into a tempfile if applicable so the python heredoc can re-open
-# it; passing stdin straight to the heredoc works on bash but fails when the
-# script is sourced or run under unusual launchers.
+# Read stdin into a tempfile if applicable so curate.py can re-open it;
+# passing stdin straight through works on bash but fails when the script
+# is sourced or run under unusual launchers. The tempfile + trap stays
+# here (not in apply.py) because the stdin payload feeds curate.py, not
+# apply.py, and the cleanup must outlive both python subprocesses.
 STDIN_FILE=""
 if [ "$FROM_STDIN" = true ]; then
   STDIN_FILE=$(mktemp -t crewrig-curate.XXXXXX)
@@ -129,43 +131,7 @@ command -v gh >/dev/null 2>&1 || {
   exit 3
 }
 
-# Parse JSON and open one issue per cluster.
-echo "$CURATE_OUT" | "$MEMPALACE_PYTHON" -c '
-import json, os, subprocess, sys
-
-data = json.load(sys.stdin)
-clusters = data.get("clusters", [])
-if not clusters:
-    print("No clusters above threshold; no issues to open.")
-    sys.exit(0)
-
-opened = []
-failures = []
-for c in clusters:
-    target = c["target_repo"]
-    title = c["title"]
-    body = c["body"]
-    labels = c.get("labels", ["harness-feedback"])
-    print(f"--- Opening issue on {target}: {title}")
-    cmd = ["gh", "issue", "create",
-           "--repo", target.replace("https://github.com/", ""),
-           "--title", title,
-           "--body", body]
-    for lbl in labels:
-        cmd.extend(["--label", lbl])
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        opened.append({"cluster": c["cluster_key"], "url": result.stdout.strip()})
-    except subprocess.CalledProcessError as e:
-        failures.append({"cluster": c["cluster_key"], "error": e.stderr.strip()})
-
-print()
-print(f"Opened: {len(opened)} issue(s)")
-for o in opened:
-    print(f"  - {o[\"cluster\"]}: {o[\"url\"]}")
-if failures:
-    print(f"Failures: {len(failures)}", file=sys.stderr)
-    for f in failures:
-        print(f"  - {f[\"cluster\"]}: {f[\"error\"]}", file=sys.stderr)
-    sys.exit(4)
-'
+# Parse JSON and open one issue per cluster. Invoke via $MEMPALACE_PYTHON
+# (not bare shebang) so that any future `from mempalace …` import in
+# apply.py resolves to the same interpreter as curate.py.
+echo "$CURATE_OUT" | "$MEMPALACE_PYTHON" "$(dirname "$0")/apply.py"

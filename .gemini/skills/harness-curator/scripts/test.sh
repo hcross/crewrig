@@ -152,5 +152,65 @@ PARKED=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "parked-singl
 [ -z "$PARKED" ] || { echo "FAIL: parked-singleton should be parked, not in clusters" >&2; exit 1; }
 echo "  PASS parked-singleton excluded from output"
 
+# --- apply.py orchestration (--dry-run-apply) ----------------------------
+# Pipe the curator JSON through apply.py --dry-run-apply. Each cluster
+# round-trips as one JSON-array line representing the `gh issue create`
+# argv that would have been invoked. The flag exists so we never need to
+# stub `gh` to assert orchestration shape.
+APPLY="$SKILL_DIR/scripts/apply.py"
+[ -f "$APPLY" ] || { echo "FAIL: apply.py missing: $APPLY" >&2; exit 1; }
+
+set +e
+APPLY_OUT=$(printf '%s\n' "$OUT" | python3 "$APPLY" --dry-run-apply)
+APPLY_RC=$?
+set -e
+assert "apply --dry-run-apply exit code" "0" "$APPLY_RC"
+
+# Two qualified clusters → exactly two argv lines, no spurious output.
+APPLY_LINES=$(printf '%s\n' "$APPLY_OUT" | grep -c '^\[')
+assert "apply --dry-run-apply emits one argv line per cluster" "2" "$APPLY_LINES"
+
+# Helper jq filter: collect all `--label <value>` pairs as a list, in order.
+LABELS_FILTER='[. as $a | range(length) | select($a[.] == "--label") | $a[.+1]]'
+
+# yq-merge argv shape: gh issue create against the stripped repo slug,
+# carrying the cluster title and the full three-label tuple in order.
+YQ_TITLE=$(echo "$YQ" | jq -r '.title')
+YQ_ARGV=$(printf '%s\n' "$APPLY_OUT" | jq -c --arg t "$YQ_TITLE" \
+  'select(type == "array" and (index($t) != null))')
+[ -n "$YQ_ARGV" ] || { echo "FAIL: yq-merge argv line not found in apply output" >&2; exit 1; }
+assert "yq-merge argv head" '["gh","issue","create"]' \
+  "$(echo "$YQ_ARGV" | jq -c '.[0:3]')"
+assert "yq-merge argv --repo (prefix stripped)" "hcross/crewrig" \
+  "$(echo "$YQ_ARGV" | jq -r '.[(index("--repo"))+1]')"
+assert "yq-merge argv labels" '["harness-feedback","room:prompt","severity:med"]' \
+  "$(echo "$YQ_ARGV" | jq -c "$LABELS_FILTER")"
+
+# gh-body-truncation argv: same structural checks, severity:high labels.
+HIGH_TITLE=$(echo "$HIGH" | jq -r '.title')
+HIGH_ARGV=$(printf '%s\n' "$APPLY_OUT" | jq -c --arg t "$HIGH_TITLE" \
+  'select(type == "array" and (index($t) != null))')
+[ -n "$HIGH_ARGV" ] || { echo "FAIL: gh-body-truncation argv line not found" >&2; exit 1; }
+assert "gh-body-truncation argv head" '["gh","issue","create"]' \
+  "$(echo "$HIGH_ARGV" | jq -c '.[0:3]')"
+assert "gh-body-truncation argv --repo (prefix stripped)" "hcross/crewrig" \
+  "$(echo "$HIGH_ARGV" | jq -r '.[(index("--repo"))+1]')"
+assert "gh-body-truncation argv labels" '["harness-feedback","room:tool","severity:high"]' \
+  "$(echo "$HIGH_ARGV" | jq -c "$LABELS_FILTER")"
+
+# No-clusters branch: empty .clusters yields the friendly notice, exit 0.
+EMPTY_JSON='{"stats":{"total_drawers":0,"valid_frictions":0,"skipped_malformed":0,"clusters_formed":0,"clusters_above_threshold":0,"clusters_parked":0,"routing_failures":0},"clusters":[]}'
+set +e
+EMPTY_OUT=$(printf '%s\n' "$EMPTY_JSON" | python3 "$APPLY" --dry-run-apply)
+EMPTY_RC=$?
+set -e
+assert "apply --dry-run-apply empty clusters exit code" "0" "$EMPTY_RC"
+echo "$EMPTY_OUT" | grep -q "No clusters above threshold; no issues to open." || {
+  echo "FAIL: empty-clusters notice missing" >&2
+  echo "$EMPTY_OUT" >&2
+  exit 1
+}
+echo "  PASS apply --dry-run-apply emits no-clusters notice"
+
 echo ""
 echo "OK: harness-curate smoke test passed."
