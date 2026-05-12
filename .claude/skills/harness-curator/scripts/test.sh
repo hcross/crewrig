@@ -61,14 +61,22 @@ assert() {
   fi
 }
 
-# 6 input drawers
-assert "stats.total_drawers"       "6" "$(echo "$OUT" | jq -r '.stats.total_drawers')"
+# 7 input drawers (drw-007 added to exercise the opened_as dedup path)
+assert "stats.total_drawers"       "7" "$(echo "$OUT" | jq -r '.stats.total_drawers')"
 
-# 4 valid; 2 malformed: drw-005 (no FRICTION: prefix) and drw-006 (empty writer_agent)
+# 4 valid; 2 malformed: drw-005 (no FRICTION: prefix) and drw-006 (empty
+# writer_agent). drw-007 is well-formed but already correlated → counted
+# in skipped_resolved, NOT in skipped_malformed or valid_frictions.
 assert "stats.valid_frictions"     "4" "$(echo "$OUT" | jq -r '.stats.valid_frictions')"
 assert "stats.skipped_malformed"   "2" "$(echo "$OUT" | jq -r '.stats.skipped_malformed')"
 
-# 3 cluster keys: yq-merge, gh-body-truncation, parked-singleton
+# Regression for issue #69: drw-007 carries `opened_as: <url>` and must be
+# filtered before clustering so the curator does not re-open an issue.
+assert "stats.skipped_resolved"    "1" "$(echo "$OUT" | jq -r '.stats.skipped_resolved')"
+
+# 3 cluster keys: yq-merge, gh-body-truncation, parked-singleton.
+# drw-007 is filtered upstream of clustering, so its subcategory must not
+# appear as a cluster key — see the explicit assertion further down.
 assert "stats.clusters_formed"     "3" "$(echo "$OUT" | jq -r '.stats.clusters_formed')"
 
 # Above threshold:
@@ -152,6 +160,18 @@ PARKED=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "parked-singl
 [ -z "$PARKED" ] || { echo "FAIL: parked-singleton should be parked, not in clusters" >&2; exit 1; }
 echo "  PASS parked-singleton excluded from output"
 
+# Regression for issue #69: the resolved drawer's subcategory must never
+# surface as a cluster_key. drw-007 is severity:high, so absent the
+# pre-cluster skip filter it would qualify as a high-severity singleton
+# bypass and pollute the output. Its absence proves the filter ran.
+RESOLVED_CLUSTER=$(echo "$OUT" | jq -c '.clusters[] | select(.cluster_key == "stale-resolved-fixture")')
+[ -z "$RESOLVED_CLUSTER" ] || {
+  echo "FAIL: resolved drawer (drw-007) subcategory leaked into clusters" >&2
+  echo "$RESOLVED_CLUSTER" >&2
+  exit 1
+}
+echo "  PASS resolved-drawer subcategory absent from clusters"
+
 # --- apply.py orchestration (--dry-run-apply) ----------------------------
 # Pipe the curator JSON through apply.py --dry-run-apply. Each cluster
 # round-trips as one JSON-array line representing the `gh issue create`
@@ -167,8 +187,35 @@ set -e
 assert "apply --dry-run-apply exit code" "0" "$APPLY_RC"
 
 # Two qualified clusters → exactly two argv lines, no spurious output.
+# (apply.py now emits a sibling object line per cluster carrying the
+# would_update_drawers list — that line starts with `{`, so the `^\[`
+# filter still counts only argv arrays.)
 APPLY_LINES=$(printf '%s\n' "$APPLY_OUT" | grep -c '^\[')
 assert "apply --dry-run-apply emits one argv line per cluster" "2" "$APPLY_LINES"
+
+# Issue #69: alongside each argv array, apply.py emits a JSON object line
+# `{"would_update_drawers": [...], "cluster_key": "..."}` so the
+# orchestration shape now exposes the drawers that would receive the
+# `opened_as` write-back. Two qualified clusters → two object lines.
+APPLY_OBJECTS=$(printf '%s\n' "$APPLY_OUT" | jq -c 'select(type == "object" and (.would_update_drawers // null) != null)' 2>/dev/null || true)
+APPLY_OBJ_COUNT=$(printf '%s\n' "$APPLY_OBJECTS" | grep -c .)
+assert "apply --dry-run-apply emits one would_update_drawers object per cluster" \
+  "2" "$APPLY_OBJ_COUNT"
+
+# yq-merge object: 2 source drawers (drw-001, drw-002) propagated via _drawer_id.
+YQ_OBJ=$(printf '%s\n' "$APPLY_OBJECTS" | jq -c 'select(.cluster_key == "yq-merge")')
+[ -n "$YQ_OBJ" ] || { echo "FAIL: yq-merge would_update_drawers object missing" >&2; exit 1; }
+assert "yq-merge would_update_drawers type"   "array"   "$(echo "$YQ_OBJ" | jq -r '.would_update_drawers | type')"
+assert "yq-merge would_update_drawers length" "2"       "$(echo "$YQ_OBJ" | jq -r '.would_update_drawers | length')"
+assert "yq-merge would_update_drawers cluster_key" "yq-merge" "$(echo "$YQ_OBJ" | jq -r '.cluster_key')"
+
+# gh-body-truncation object: severity:high singleton → exactly 1 drawer (drw-003).
+HIGH_OBJ=$(printf '%s\n' "$APPLY_OBJECTS" | jq -c 'select(.cluster_key == "gh-body-truncation")')
+[ -n "$HIGH_OBJ" ] || { echo "FAIL: gh-body-truncation would_update_drawers object missing" >&2; exit 1; }
+assert "gh-body-truncation would_update_drawers cluster_key" "gh-body-truncation" \
+  "$(echo "$HIGH_OBJ" | jq -r '.cluster_key')"
+assert "gh-body-truncation would_update_drawers length" "1" \
+  "$(echo "$HIGH_OBJ" | jq -r '.would_update_drawers | length')"
 
 # Helper jq filter: collect all `--label <value>` pairs as a list, in order.
 LABELS_FILTER='[. as $a | range(length) | select($a[.] == "--label") | $a[.+1]]'
@@ -261,10 +308,17 @@ else
 
   # Seed exactly one drawer that qualifies as a singleton via the
   # severity:high bypass. Title prefix and the writer_agent / evidence
-  # keys mirror the schema in assets/sample-frictions.json.
-  "$MEMPALACE_PYTHON" - <<'PY'
+  # keys mirror the schema in assets/sample-frictions.json. The
+  # tool_add_drawer return value carries the assigned drawer_id; capture
+  # it for the round-trip assertions below (issue #69).
+  SEEDED_DRAWER_ID=$("$MEMPALACE_PYTHON" - <<'PY'
+# Mirror curate.py: dup fd 1 BEFORE importing mempalace.mcp_server, which
+# swaps sys.stdout for the JSON-RPC channel and would otherwise eat our
+# drawer_id capture.
+import os
+_real = os.fdopen(os.dup(1), "w", encoding="utf-8", closefd=False)
 from mempalace.mcp_server import tool_add_drawer
-tool_add_drawer(
+result = tool_add_drawer(
     wing="harness-friction",
     room="tool",
     content=(
@@ -277,7 +331,15 @@ tool_add_drawer(
         "  - community-config/skills/harness-curator/scripts/curate.py:60\n"
     ),
 )
+_real.write(result.get("drawer_id", "") if isinstance(result, dict) else str(result))
+_real.flush()
 PY
+)
+  [ -n "$SEEDED_DRAWER_ID" ] || {
+    echo "FAIL test_real: tool_add_drawer returned no drawer_id" >&2
+    exit 1
+  }
+  echo "  PASS test_real seeded drawer ($SEEDED_DRAWER_ID)"
 
   # Run curate.sh with NO --from-stdin so the real read_from_mempalace
   # path executes. Split stdout / stderr — mempalace chatter on stderr
@@ -322,6 +384,65 @@ PY
     "$(echo "$REAL_OUT" | jq -r '.stats.clusters_above_threshold')"
   assert "test_real.cluster_key" "real-mempalace-smoke" \
     "$(echo "$REAL_OUT" | jq -r '.clusters[0].cluster_key')"
+
+  # --- Issue #69 round-trip: _drawer_id propagation + write-back skip ----
+  # Pipe the real-MemPalace curator output through apply.py --dry-run-apply
+  # and assert that the would_update_drawers list carries the exact
+  # drawer_id returned at seed time. This proves _drawer_id propagates
+  # from tool_list_drawers → cluster JSON → apply.py argv-build.
+  set +e
+  REAL_APPLY_OUT=$(printf '%s\n' "$REAL_OUT" | python3 "$APPLY" --dry-run-apply)
+  REAL_APPLY_RC=$?
+  set -e
+  assert "test_real apply --dry-run-apply exit code" "0" "$REAL_APPLY_RC"
+
+  REAL_APPLY_OBJ=$(printf '%s\n' "$REAL_APPLY_OUT" | jq -c 'select(type == "object" and (.would_update_drawers // null) != null)')
+  [ -n "$REAL_APPLY_OBJ" ] || {
+    echo "FAIL test_real apply.would_update_drawers object missing" >&2
+    echo "$REAL_APPLY_OUT" >&2
+    exit 1
+  }
+  REAL_APPLY_IDS=$(echo "$REAL_APPLY_OBJ" | jq -c '.would_update_drawers')
+  assert "test_real would_update_drawers carries seeded drawer_id" \
+    "[\"$SEEDED_DRAWER_ID\"]" "$REAL_APPLY_IDS"
+
+  # Simulate the real --apply write-back: stamp `opened_as: <url>` on the
+  # seeded drawer the same way apply.py's real path does. The fd-dup
+  # mirrors the seed script — mempalace.mcp_server swaps sys.stdout on
+  # import.
+  "$MEMPALACE_PYTHON" - "$SEEDED_DRAWER_ID" <<'PY'
+import os, sys
+_real = os.fdopen(os.dup(1), "w", encoding="utf-8", closefd=False)
+from mempalace.mcp_server import tool_get_drawer, tool_update_drawer
+did = sys.argv[1]
+drawer = tool_get_drawer(drawer_id=did)
+new_content = drawer["content"].rstrip() + "\nopened_as: https://example.com/fake/1\n"
+tool_update_drawer(drawer_id=did, content=new_content)
+_real.write("ok")
+_real.flush()
+PY
+
+  # Re-run curate; the freshly stamped drawer must now be filtered as
+  # `resolved`, leaving zero valid frictions and zero clusters.
+  set +e
+  bash "$SCRIPT" --dry-run >"$tmpdir/out2.json" 2>"$tmpdir/err2.log"
+  REAL_RC2=$?
+  set -e
+  assert "test_real second-run exit code" "0" "$REAL_RC2"
+  REAL_OUT2=$(cat "$tmpdir/out2.json")
+  assert "test_real second-run stats.skipped_resolved" "1" \
+    "$(echo "$REAL_OUT2" | jq -r '.stats.skipped_resolved')"
+  assert "test_real second-run stats.valid_frictions" "0" \
+    "$(echo "$REAL_OUT2" | jq -r '.stats.valid_frictions')"
+  assert "test_real second-run stats.clusters_above_threshold" "0" \
+    "$(echo "$REAL_OUT2" | jq -r '.stats.clusters_above_threshold')"
+  RESOLVED_LEAK=$(echo "$REAL_OUT2" | jq -c '.clusters[] | select(.cluster_key == "real-mempalace-smoke")')
+  [ -z "$RESOLVED_LEAK" ] || {
+    echo "FAIL test_real second-run: stamped drawer leaked into clusters" >&2
+    echo "$RESOLVED_LEAK" >&2
+    exit 1
+  }
+  echo "  PASS test_real second-run: stamped drawer absent from clusters"
 fi
 
 echo ""

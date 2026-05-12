@@ -32,5 +32,11 @@
     "room": "prompt",
     "filed_at": "2026-05-10T08:00:00.000000",
     "content": "FRICTION: Empty writer_agent — must be rejected per schema\n\nwriter_agent:\nsubcategory: should-be-rejected\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - foo.md:1"
+  },
+  {
+    "drawer_id": "drw-007",
+    "room": "tool",
+    "filed_at": "2026-05-07T10:00:00.000000",
+    "content": "FRICTION: Already-correlated friction must be skipped by the curator\n\nwriter_agent: claude-code\nsubcategory: stale-resolved-fixture\ncanonical: https://github.com/hcross/crewrig\nseverity: high\nevidence:\n  - community-config/skills/harness-curator/scripts/apply.py:99\nsuggestion: Skip on truthy opened_as.\nopened_as: https://github.com/hcross/crewrig/issues/99"
   }
 ]
