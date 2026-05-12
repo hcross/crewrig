@@ -503,11 +503,16 @@ suggestion: <free-form fix idea, optional but encouraged>
   above shows the canonical list form; a single inline value
   (`evidence: <path-or-url>` on one line) is also accepted as a
   one-entry list — useful when the friction has a single pointer.
-- `canonical` — when set, prefer the value of the offending component's
-  own `provenance.canonical` block. Hand-typing a different URL drifts
-  the friction away from the component the Curator should route the MR
-  against. If the offending component cannot be identified at tag time,
-  leave `canonical` empty and let `evidence:` carry the trail.
+- `canonical` — when set, prefer the value of the offending
+  component's own `provenance.canonical` block, which is the **repo**
+  URL (`https://github.com/<owner>/<repo>`). NOT a file URL: the
+  Curator routes the resulting issue via `gh issue create --repo
+  <owner>/<repo>`, so a `/blob/<branch>/<path>` URL produces a
+  malformed routing target. File paths and line numbers belong in
+  `evidence:`. Hand-typing a different repo URL drifts the friction
+  away from the component the Curator should route the MR against;
+  if the offending component cannot be identified at tag time, leave
+  `canonical` empty and let `evidence:` carry the trail.
 - `severity` — `high` is reserved for blockers (e.g. agent corrupted
   data, leaked a secret, or violated a stated guarantee). `low` is for
   papercuts. Default `med`.

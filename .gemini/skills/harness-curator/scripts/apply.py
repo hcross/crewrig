@@ -22,6 +22,21 @@ import sys
 
 def _build_cmd(cluster: dict) -> list[str]:
     target = cluster["target_repo"]
+    # Defensive: a filer may set `canonical:` to a file URL
+    # (https://github.com/<o>/<r>/blob/<branch>/<path>) despite the
+    # schema requiring the bare repo form. Strip /blob/... or
+    # /tree/... so `gh --repo` receives a valid <owner>/<repo> slug.
+    # Schema contract: harness-report/SKILL.md → `canonical` field.
+    for sep in ("/blob/", "/tree/"):
+        if sep in target:
+            print(
+                f"  warn: target_repo '{target}' contains '{sep}'; "
+                "stripping to repo root. Filers should set canonical "
+                "to the repo URL, not a file URL.",
+                file=sys.stderr,
+            )
+            target = target.split(sep, 1)[0]
+            break
     title = cluster["title"]
     body = cluster["body"]
     labels = cluster.get("labels", ["harness-feedback"])

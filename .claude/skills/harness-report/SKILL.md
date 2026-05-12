@@ -7,7 +7,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 
@@ -98,8 +98,16 @@ Strongly encouraged:
 
 - `subcategory` — a free-form clustering anchor. Frictions sharing a
   `subcategory` get bundled into the same MR by the Curator.
-- `canonical` — the canonical URL of the offending component (from
-  its own `provenance.canonical` block when available).
+- `canonical` — the canonical **repo** URL of the offending
+  component's home, in the GitHub `https://github.com/<owner>/<repo>`
+  form (as set in the component's `provenance.canonical` block at
+  build time). NOT a file URL: the Curator's apply step routes the
+  issue via `gh issue create --repo <owner>/<repo>` by stripping the
+  `https://github.com/` prefix (see
+  `community-config/skills/harness-curator/scripts/apply.py:23-36`),
+  so a `/blob/<branch>/<path>` URL produces a malformed `--repo`
+  argument and the issue fails to land. Put the file path in
+  `evidence:` instead.
 - `severity` — `low` / `med` / `high`. Default `med`. Reserve `high`
   for blockers; it bypasses the cluster threshold and forces an MR.
 - `suggestion` — what you think would fix it. The Curator weighs

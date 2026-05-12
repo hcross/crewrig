@@ -259,6 +259,72 @@ echo "$EMPTY_OUT" | grep -q "No clusters above threshold; no issues to open." ||
 }
 echo "  PASS apply --dry-run-apply emits no-clusters notice"
 
+# --- Regression: defensive target_repo normalization (issue #63) ---------
+# A filer may set `canonical:` to a file URL (https://github.com/<o>/<r>/
+# blob/<branch>/<path>) or a tree URL (.../tree/<branch>/...) despite the
+# schema requiring the bare repo form. apply.py must strip /blob/... or
+# /tree/... so `gh --repo` receives a valid <owner>/<repo> slug, and warn
+# the maintainer on stderr. The clean-URL case must NOT emit the warning
+# (idempotence). Inline JSON because this exercises a malformed-input
+# shape that the existing sample-frictions fixture deliberately doesn't
+# cover.
+
+# Helper: build a minimal one-cluster payload around a given target_repo.
+# Strict-mode-safe printf form (single line, no heredoc indentation games).
+make_cluster_payload() {
+  local target="$1"
+  printf '{"stats":{"total_drawers":1,"valid_frictions":1,"skipped_malformed":0,"skipped_resolved":0,"clusters_formed":1,"clusters_above_threshold":1,"clusters_parked":0,"routing_failures":0},"clusters":[{"cluster_key":"norm-probe","cluster_size":1,"target_repo":"%s","title":"normalization probe","body":"body","labels":["harness-feedback"],"frictions":[{"_drawer_id":"drw-norm-1"}]}]}' "$target"
+}
+
+run_normalize_case() {
+  local label="$1" target="$2" tmp
+  tmp=$(mktemp -d -t crewrig-norm.XXXXXX)
+  set +e
+  make_cluster_payload "$target" | python3 "$APPLY" --dry-run-apply \
+    >"$tmp/out" 2>"$tmp/err"
+  local rc=$?
+  set -e
+  assert "$label exit code" "0" "$rc"
+  # argv is the first (and only) JSON array line on stdout.
+  local argv
+  argv=$(grep '^\[' "$tmp/out" | head -n1)
+  [ -n "$argv" ] || { echo "FAIL $label: no argv array line on stdout" >&2; cat "$tmp/out" >&2; exit 1; }
+  assert "$label argv --repo (slug only)" "hcross/crewrig" \
+    "$(echo "$argv" | jq -r '.[(index("--repo"))+1]')"
+  # Export tmpdir path via global so the caller can inspect stderr.
+  NORM_TMP="$tmp"
+}
+
+# Sub-case 1: /blob/<branch>/<path> form → stripped, warning emitted.
+run_normalize_case "norm.blob" \
+  "https://github.com/hcross/crewrig/blob/main/community-config/skills/architect/SKILL.md"
+if ! grep -q "stripping to repo root" "$NORM_TMP/err"; then
+  echo "FAIL norm.blob stderr missing 'stripping to repo root' warning" >&2
+  cat "$NORM_TMP/err" >&2
+  exit 1
+fi
+echo "  PASS norm.blob stderr contains 'stripping to repo root'"
+
+# Sub-case 2: /tree/<branch>/<path> form → stripped, warning emitted.
+run_normalize_case "norm.tree" \
+  "https://github.com/hcross/crewrig/tree/main/community-config"
+if ! grep -q "stripping to repo root" "$NORM_TMP/err"; then
+  echo "FAIL norm.tree stderr missing 'stripping to repo root' warning" >&2
+  cat "$NORM_TMP/err" >&2
+  exit 1
+fi
+echo "  PASS norm.tree stderr contains 'stripping to repo root'"
+
+# Sub-case 3: already-clean bare repo URL → SAME argv shape, NO warning.
+# Idempotence guard: the normalization block must not fire on valid input.
+run_normalize_case "norm.clean" "https://github.com/hcross/crewrig"
+if grep -q "stripping to repo root" "$NORM_TMP/err"; then
+  echo "FAIL norm.clean stderr unexpectedly contains 'stripping to repo root'" >&2
+  cat "$NORM_TMP/err" >&2
+  exit 1
+fi
+echo "  PASS norm.clean stderr does not contain 'stripping to repo root'"
+
 # --- Regression: real MemPalace path (no --from-stdin) -------------------
 # This section guards the curate-stdout-hijack bug (issue #62): when
 # curate.py reads from MemPalace, importing `mempalace.mcp_server` swaps
