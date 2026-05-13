@@ -1,10 +1,11 @@
 ---
 name: security
 description: "Security review skill for threat modeling, dependency audit, secret hygiene, and code review through a security lens. Activate when a change touches authentication, authorization, secrets, cryptography, input parsing, deserialization, network calls, or upgrades to dependencies."
+license: Apache-2.0
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 

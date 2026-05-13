@@ -6,11 +6,12 @@ description: "Harness feedback-loop curator. Activate on demand to read
   declared in components' provenance blocks. The fix MR lands later
   (human-authored or via the auto-fix mode tracked in #42)."
 type: skill
+license: Apache-2.0
 compatibility: Requires bash, jq, the gh CLI (used by setup-labels.sh and --apply), and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4').
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.1.0"
+  version: "1.1.1"
 claude:
   allowed-tools:
     - Read

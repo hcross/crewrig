@@ -1,10 +1,12 @@
 ---
 name: pr-logbook
 description: "Pull request and logbook composer. Activate when opening a PR, updating a PR description, or appending to a logbook issue. Produces titles, bodies, test plans, and logbook entries that conform to the project's AGENTS.md conventions."
+license: Apache-2.0
+compatibility: "Requires git (for log and staged-file inspection), the gh CLI (for PR creation and logbook issue updates), and bash."
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 

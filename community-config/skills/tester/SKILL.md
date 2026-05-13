@@ -5,10 +5,11 @@ description: "Test authoring and test-strategy skill. Activate when writing
   or reviewing whether a change has adequate coverage. Optimised for
   high-signal tests that catch regressions, not coverage theatre."
 type: skill
+license: Apache-2.0
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+  version: "1.0.1"
 claude:
   allowed-tools:
     - Read

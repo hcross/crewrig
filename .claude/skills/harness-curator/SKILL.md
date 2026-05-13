@@ -1,6 +1,8 @@
 ---
 name: harness-curator
 description: "Harness feedback-loop curator. Activate on demand to read friction tags from the global harness-friction wing, cluster them, and open one descriptive issue per cluster on the canonical/feedback repos declared in components' provenance blocks. The fix MR lands later (human-authored or via the auto-fix mode tracked in #42)."
+license: Apache-2.0
+compatibility: "Requires bash, jq, the gh CLI (used by setup-labels.sh and --apply), and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4')."
 allowed-tools:
   - Read
   - Bash
@@ -10,7 +12,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 

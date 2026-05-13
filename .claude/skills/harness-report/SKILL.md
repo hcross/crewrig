@@ -1,13 +1,14 @@
 ---
 name: harness-report
 description: "Tag a friction encountered during real work. Activate the moment any recognition signal fires (user pushback, second-time tool surprise, sibling-skill workaround, etc.). The single canonical implementation of the friction-tagging protocol — all other skills point here."
+license: Apache-2.0
 allowed-tools:
   - Read
 user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 

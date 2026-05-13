@@ -5,10 +5,12 @@ description: "Implementation skill for writing, modifying, and refactoring
   architect skill. Optimised for parallelisable execution, fast feedback
   loops, and minimal surface area per change."
 type: skill
+license: Apache-2.0
+compatibility: "Requires bash (used by scripts/build-components.sh) and git (used for staged-file inspection of executable bits)."
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.2"
+  version: "1.0.3"
 claude:
   allowed-tools:
     - Read

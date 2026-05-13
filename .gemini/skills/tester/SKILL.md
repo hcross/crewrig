@@ -1,10 +1,11 @@
 ---
 name: tester
 description: "Test authoring and test-strategy skill. Activate when writing new tests, planning a test strategy, enumerating edge cases for a feature, or reviewing whether a change has adequate coverage. Optimised for high-signal tests that catch regressions, not coverage theatre."
+license: Apache-2.0
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 

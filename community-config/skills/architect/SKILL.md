@@ -5,10 +5,11 @@ description: "Design and architecture skill for ADRs, RFCs, design reviews,
   component, introduces a new abstraction, modifies a shared contract, or when
   the user explicitly asks for a design opinion or alternatives."
 type: skill
+license: Apache-2.0
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.3"
+  version: "1.0.4"
 claude:
   allowed-tools:
     - Read
