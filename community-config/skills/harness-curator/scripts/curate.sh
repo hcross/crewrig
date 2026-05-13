@@ -15,6 +15,7 @@
 #                          [--from-stdin]
 #                          [--target-repo <url>]
 #                          [--threshold <n>]
+#                          [--deep] [--deep-window <n>]
 #
 # Options:
 #   --dry-run        Output JSON of clusters that would become issues (default).
@@ -25,6 +26,11 @@
 #                    provenance routing). For tests / single-fork curation.
 #   --threshold      Minimum cluster size to propose an issue (default: 2).
 #                    Severity-`high` frictions bypass this and always cluster.
+#   --deep           Deep sweep mode: scan wing=transcripts with heuristic
+#                    pre-filtering and emit a Markdown review document
+#                    instead of clusters/issues. Incompatible with --apply.
+#   --deep-window    Maximum number of transcript drawers to scan in --deep
+#                    mode (default: 500).
 #
 # Environment:
 #   MEMPALACE_PYTHON Python binary with `mempalace` installed (auto-detected
@@ -42,6 +48,8 @@ DRY_RUN=true
 FROM_STDIN=false
 TARGET_REPO=""
 THRESHOLD=2
+DEEP_MODE=false
+DEEP_WINDOW=500
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,8 +58,10 @@ while [[ $# -gt 0 ]]; do
     --from-stdin)     FROM_STDIN=true; shift ;;
     --target-repo)    TARGET_REPO="$2"; shift 2 ;;
     --threshold)      THRESHOLD="$2"; shift 2 ;;
+    --deep)           DEEP_MODE=true; shift ;;
+    --deep-window)    DEEP_WINDOW="$2"; shift 2 ;;
     --help|-h)
-      sed -n '2,30p' "$0"
+      sed -n '2,33p' "$0"
       exit 0
       ;;
     *)
@@ -64,6 +74,11 @@ done
 
 if ! [[ "$THRESHOLD" =~ ^[0-9]+$ ]] || [ "$THRESHOLD" -lt 1 ]; then
   echo "Error: --threshold must be a positive integer" >&2
+  exit 1
+fi
+
+if [ "$DEEP_MODE" = true ] && [ "$DRY_RUN" = false ]; then
+  echo "Error: --deep is incompatible with --apply (--deep produces a review document only)." >&2
   exit 1
 fi
 
@@ -115,9 +130,16 @@ CURATE_OUT=$(env \
   THRESHOLD="$THRESHOLD" \
   TARGET_REPO_OVERRIDE="$TARGET_REPO" \
   FROM_STDIN_FILE="$STDIN_FILE" \
+  DEEP_MODE="$DEEP_MODE" \
+  DEEP_WINDOW="$DEEP_WINDOW" \
   "$MEMPALACE_PYTHON" "$(dirname "$0")/curate.py")
 
 # --- Output / apply ---
+if [ "$DEEP_MODE" = true ]; then
+  printf '%s\n' "$CURATE_OUT"
+  exit 0
+fi
+
 if [ "$DRY_RUN" = true ]; then
   printf '%s\n' "$CURATE_OUT"
   exit 0
