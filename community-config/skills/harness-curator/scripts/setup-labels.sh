@@ -37,7 +37,10 @@ REPO=""
 DRY_RUN=0
 
 usage() {
-  sed -n '2,30p' "$0" >&2
+  # Sentinel-based extraction: print the header doc-block (everything
+  # between line 2 and the first `set -euo pipefail` line, exclusive).
+  # This stays in sync with the header regardless of its length.
+  awk 'NR>1 && /^set -euo pipefail/ {exit} NR>1 {print}' "$0" >&2
 }
 
 while [ $# -gt 0 ]; do
