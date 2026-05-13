@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 CLAUDE_HOME="${HOME}/.claude"
 CLAUDE_RULES="${CLAUDE_HOME}/rules"
@@ -84,29 +86,6 @@ if [ ${#MISSING_PREREQS[@]} -gt 0 ]; then
   exit 1
 fi
 
-# --- Helper: timestamped backup of a file ---
-backup_file() {
-  local target="$1"
-  if [ -f "$target" ]; then
-    local stamp
-    stamp="$(date +%Y%m%d-%H%M%S)"
-    cp "$target" "${target}.bak.${stamp}"
-    echo "  Backed up: ${target##*/} -> ${target##*/}.bak.${stamp}"
-  fi
-}
-
-# --- Helper: install a file (copy or link) ---
-install_file() {
-  local source="$1" target="$2" label="$3"
-  if [ "$INSTALL_MODE" = "link" ]; then
-    ln -sfn "$source" "$target"
-    echo "  Linked: $label"
-  else
-    cp "$source" "$target"
-    echo "  Copied: $label"
-  fi
-}
-
 # --- Existing rules: keep or refresh? ---
 # If existing rules are detected, the user can:
 #   - keep:    skip the entire rules-installation phase (shared config + team/
@@ -187,52 +166,6 @@ mcp_register_user() {
 # and Halls — all relied upon by the cross-tool continuity protocol.
 MEMPALACE_MIN_VERSION="3.3.3"
 MEMPALACE_MAX_VERSION_EXCLUSIVE="3.4"
-
-# Echo the installed MemPalace version on stdout; exit non-zero if not importable.
-mempalace_installed_version() {
-  "$1" -c "from importlib.metadata import version; print(version('mempalace'))" 2>/dev/null
-}
-
-# Exit 0 if the MemPalace version available to <python> is within
-# [MEMPALACE_MIN_VERSION, MEMPALACE_MAX_VERSION_EXCLUSIVE), 1 otherwise.
-mempalace_version_in_range() {
-  local py="$1"
-  "$py" - <<EOF >/dev/null 2>&1
-import sys
-from importlib.metadata import version
-from packaging.version import Version
-v = Version(version("mempalace"))
-mn = Version("${MEMPALACE_MIN_VERSION}")
-mx = Version("${MEMPALACE_MAX_VERSION_EXCLUSIVE}")
-sys.exit(0 if mn <= v < mx else 1)
-EOF
-}
-
-# Helper: detect a Python interpreter that can import mempalace.mcp_server
-# Tries (in order): pipx default venv, the python from the 'mempalace' wrapper
-# shebang, and finally `python3`. Echoes the first interpreter that works.
-detect_mempalace_python() {
-  local candidates=()
-  candidates+=("$HOME/.local/pipx/venvs/mempalace/bin/python")
-  local mp_bin shebang_py
-  mp_bin="$(command -v mempalace 2>/dev/null || true)"
-  if [ -n "$mp_bin" ] && [ -f "$mp_bin" ]; then
-    shebang_py="$(head -1 "$mp_bin" 2>/dev/null | sed -n 's|^#!\([^ ]*\).*|\1|p')"
-    [ -n "$shebang_py" ] && candidates+=("$shebang_py")
-  fi
-  candidates+=("python3")
-
-  local py
-  for py in "${candidates[@]}"; do
-    [ -n "$py" ] || continue
-    command -v "$py" >/dev/null 2>&1 || continue
-    if "$py" -c "import mempalace.mcp_server" >/dev/null 2>&1; then
-      echo "$py"
-      return 0
-    fi
-  done
-  return 1
-}
 
 # Backup ~/.claude.json once before any MCP mutation
 backup_file "$CLAUDE_USER_CONFIG"

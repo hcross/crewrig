@@ -11,6 +11,8 @@
 # skips them on subsequent runs.
 
 set -e
+# shellcheck source=scripts/lib/common.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 GEMINI_TMP="${GEMINI_TMP_DIR:-$HOME/.gemini/tmp}"
 WING_NAME="${MEMPALACE_HISTORY_WING:-transcripts}"
@@ -27,30 +29,6 @@ command -v fzf >/dev/null 2>&1 || {
   echo "Error: fzf is required."
   echo "Install with: brew install fzf (macOS) or apt-get install fzf (Linux)"
   exit 1
-}
-
-# --- Detect MemPalace Python interpreter (mirrors setup-claude-interactive.sh) ---
-detect_mempalace_python() {
-  local candidates=()
-  candidates+=("$HOME/.local/pipx/venvs/mempalace/bin/python")
-  local mp_bin shebang_py
-  mp_bin="$(command -v mempalace 2>/dev/null || true)"
-  if [ -n "$mp_bin" ] && [ -f "$mp_bin" ]; then
-    shebang_py="$(head -1 "$mp_bin" 2>/dev/null | sed -n 's|^#!\([^ ]*\).*|\1|p')"
-    [ -n "$shebang_py" ] && candidates+=("$shebang_py")
-  fi
-  candidates+=("python3")
-
-  local py
-  for py in "${candidates[@]}"; do
-    [ -n "$py" ] || continue
-    command -v "$py" >/dev/null 2>&1 || continue
-    if "$py" -c "import mempalace.mcp_server" >/dev/null 2>&1; then
-      echo "$py"
-      return 0
-    fi
-  done
-  return 1
 }
 
 MEMPALACE_PY="$(detect_mempalace_python || true)"
