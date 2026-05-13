@@ -8,7 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 const server = new Server(
-  { name: "SKELETON_NAME", version: "0.1.0" },
+  { name: "${SKELETON_NAME}", version: "0.1.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -41,6 +41,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 const transport = new StdioServerTransport();
 server.connect(transport).catch((err) => {
-  console.error("Failed to start SKELETON_NAME MCP server:", err);
+  console.error("Failed to start ${SKELETON_NAME} MCP server:", err);
   process.exit(1);
 });

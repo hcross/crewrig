@@ -1,11 +1,11 @@
-# SKELETON_NAME Extension
+# ${SKELETON_NAME} Extension
 
 Brief description of what this extension does.
 
 ## Installation
 
 ```bash
-task install-extension EXT=SKELETON_NAME
+task install-extension EXT=${SKELETON_NAME}
 ```
 
 ## Structure
