@@ -28,18 +28,32 @@ EXIT=0
 STDERR=""
 
 write_config() {
-  cat > "$CONFIG" <<EOF
-canonical_repo = "$1"
-feedback_repo  = "$1"
-EOF
+  # Preserve every other config key by starting from the backup and
+  # rewriting only the canonical_repo line. Keeps the test robust if
+  # crewrig.config.toml gains new keys in the future.
+  cp "$BACKUP" "$CONFIG"
+  if grep -q '^canonical_repo' "$CONFIG"; then
+    awk -v val="$1" '/^canonical_repo/ {print "canonical_repo = \"" val "\""; next} {print}' \
+      "$BACKUP" > "$CONFIG"
+  else
+    printf 'canonical_repo = "%s"\n' "$1" >> "$CONFIG"
+  fi
 }
 
 run_bundler() {
   # Sets globals EXIT, STDERR. Stdout is silenced — only failure signal matters.
+  # The optional first arg lets case (a) use --check (drift-verify only, no
+  # write) instead of running the full bundle; cases (b)/(c) want the regular
+  # path so the validator's exit-1 short-circuits before any bundle work.
   local errfile
   errfile=$(mktemp)
   EXIT=0
-  bash "$REPO_DIR/scripts/build-components.sh" --target all >/dev/null 2>"$errfile" || EXIT=$?
+  local extra_arg="${1:-}"
+  if [ -n "$extra_arg" ]; then
+    bash "$REPO_DIR/scripts/build-components.sh" --target all "$extra_arg" >/dev/null 2>"$errfile" || EXIT=$?
+  else
+    bash "$REPO_DIR/scripts/build-components.sh" --target all >/dev/null 2>"$errfile" || EXIT=$?
+  fi
   STDERR=$(cat "$errfile")
   rm -f "$errfile"
 }
@@ -56,9 +70,12 @@ report() {
   fi
 }
 
-# --- Case (a): valid canonical_repo → bundler succeeds ---
+# --- Case (a): valid canonical_repo → validator passes, bundler exits 0 ---
+# Use --check so we only run the validator + drift verify (fast), not a full
+# bundle rebuild. The validator path is exercised identically; --check is
+# the closest hot path that doesn't write files.
 write_config "https://github.com/hcross/crewrig"
-run_bundler
+run_bundler "--check"
 ok="true"
 [ "$EXIT" -eq 0 ] || ok="false"
 report "(a) valid canonical_repo accepted" "$ok"
