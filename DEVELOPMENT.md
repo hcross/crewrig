@@ -109,6 +109,51 @@ node dist/index.js
 # (Ctrl+C to stop — it runs on stdio)
 ```
 
+### Plugin Build Contract
+
+`build-claude-plugin.sh` propagates `dist/` and `package.json` into the plugin output directory because the generated `.mcp.json` resolves `${extensionPath}` to that directory at build time, and Node requires both to load an ESM MCP server at runtime.
+
+Implications for contributors:
+
+- `dist/` must be rebuildable from source via `npm run build` (`tsconfig.json` and `src/` must be committed; `dist/` is in `.gitignore`)
+- `package.json` must declare `"type": "module"` for ESM resolution (confirmed: this is the value in `extension-skeleton/base/package.json`)
+- Do not commit `dist/` inside the extension directory; the build script regenerates it
+
+Rebuild reminder:
+
+```bash
+cd extensions/my-extension
+npm run build
+task build-claude-plugin EXT=my-extension
+```
+
+## Installing a Claude Code Plugin
+
+Claude Code does not auto-discover plugins placed under `~/.claude/plugins/`. Plugins must be declared in a marketplace and installed via the CLI before Claude Code can load them.
+
+`scripts/install-claude-plugin.sh` handles this in four steps:
+
+1. Calls `build-claude-plugin.sh` → produces `dist-claude-plugin/<name>/`
+2. Generates `dist-claude-plugin/.claude-plugin/marketplace.json` with a marketplace named `<repo-basename>-local` (e.g. `crewrig-local`)
+3. Runs `claude plugin marketplace add <dist-claude-plugin-dir> --scope user`
+4. Runs `claude plugin install <name>@<marketplace-name> --scope user`
+
+Install via the task wrapper:
+
+```bash
+task install-claude-plugin EXT=my-extension
+```
+
+Verify the installation:
+
+```bash
+claude plugin list
+```
+
+Running `/<skill-name>` inside a Claude Code session also confirms that a skill from the plugin is accessible.
+
+For iterative development, prefer the `--plugin-dir` flag documented in the [Link Mode](#link-mode) section — it skips the marketplace step.
+
 ## Branching Strategy
 
 - Create a feature branch from `main`: `feat/my-extension`
@@ -178,3 +223,37 @@ extensions/my-extension/
 ```
 
 Not all directories are required — include only what your extension needs.
+
+## Session Transcript Activation
+
+Transcripts are disabled by default. To enable them, set the environment variable before starting Claude Code:
+
+```bash
+export MEMPALACE_TRANSCRIPT_ENABLED=1
+```
+
+Once enabled, the hook `hooks/mempalace-transcript.sh` is triggered on every matching event via `hooks/claude-transcript-hooks.json` (events: `UserPromptSubmit`, `PostToolUse`, `Stop`, `SessionEnd`).
+
+What is recorded:
+
+- `UserPromptSubmit` → `[USER] <raw prompt text>`
+- `PostToolUse` → `[TOOL] <tool-name>: <command/path/pattern>`
+- `Stop` → `[AGENT] Session turn completed`
+- `SessionEnd` → `[SESSION] SessionEnd: <source>`
+
+Each entry is stored as a drawer in `wing="transcripts"`, `room="<project-name>-<YYYY-MM-DD>-<session-id[:8]>"`. Content is capped at 4,000 characters per drawer. The `transcripts` wing is excluded from default MemPalace semantic searches — see [`config/TOOLS.md`](config/TOOLS.md) (Memory Activation Protocol section) for the rationale.
+
+Every tool call and every prompt generates a drawer. Long sessions accumulate hundreds of drawers. Use the prune task to manage retention:
+
+```bash
+# Dry-run: shows what would be deleted (default retention: 30 days)
+task prune-transcripts
+
+# Apply deletion
+task prune-transcripts -- --apply
+
+# Filter by project, custom retention
+task prune-transcripts -- --project my-extension --days 14 --apply
+```
+
+**Privacy:** Transcripts contain raw user prompts. Do not enable `MEMPALACE_TRANSCRIPT_ENABLED=1` on a shared MemPalace instance without evaluating data exposure for all users sharing that instance.
