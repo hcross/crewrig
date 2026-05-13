@@ -38,6 +38,9 @@ jobs:
       - name: Check community component drift
         run: bash scripts/build-components.sh --target all --check
 
+      - name: Test build-components validator
+        run: bash scripts/test-build-components.sh
+
   lint-markdown:
     runs-on: ubuntu-latest
     steps:

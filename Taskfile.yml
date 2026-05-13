@@ -155,6 +155,10 @@ tasks:
         msg: "yq is required. Install with: brew install yq"
     cmd: bash {{.REPO_DIR}}/scripts/build-components.sh --target all --check
 
+  test-components:
+    desc: Test the build-components canonical_repo validator
+    cmd: bash {{.REPO_DIR}}/scripts/test-build-components.sh
+
   # --- Linting ---
 
   lint-markdown:
