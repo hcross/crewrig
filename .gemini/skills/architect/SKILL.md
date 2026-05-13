@@ -4,7 +4,7 @@ description: "Design and architecture skill for ADRs, RFCs, design reviews, and 
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 

@@ -4,7 +4,7 @@ description: "Security review skill for threat modeling, dependency audit, secre
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 

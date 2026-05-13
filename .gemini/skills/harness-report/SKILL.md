@@ -4,7 +4,7 @@ description: "Tag a friction encountered during real work. Activate the moment a
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 

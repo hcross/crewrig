@@ -5,10 +5,11 @@ description: "Tag a friction encountered during real work. Activate the moment
   sibling-skill workaround, etc.). The single canonical implementation of
   the friction-tagging protocol — all other skills point here."
 type: skill
+license: Apache-2.0
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+  version: "1.0.2"
 claude:
   allowed-tools:
     - Read

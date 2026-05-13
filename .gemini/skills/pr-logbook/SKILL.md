@@ -4,7 +4,7 @@ description: "Pull request and logbook composer. Activate when opening a PR, upd
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 

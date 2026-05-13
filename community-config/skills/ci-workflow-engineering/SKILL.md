@@ -5,10 +5,12 @@ description: "Structured approach for building, debugging, and hardening CI/CD
   diagnose failing jobs, validate pipeline changes on a branch before merge,
   or integrate platform-specific resources (secrets, registries, certificates)."
 type: skill
+license: Apache-2.0
+compatibility: Requires the gh CLI (for fetching workflow runs and job logs) and bash. Optional: act for local workflow execution.
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+  version: "1.0.1"
 claude:
   allowed-tools:
     - Read

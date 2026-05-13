@@ -5,10 +5,12 @@ description: "Pull request and logbook composer. Activate when opening a PR,
   bodies, test plans, and logbook entries that conform to the project's
   AGENTS.md conventions."
 type: skill
+license: Apache-2.0
+compatibility: Requires git (for log and staged-file inspection), the gh CLI (for PR creation and logbook issue updates), and bash.
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
-  version: "1.0.4"
+  version: "1.0.5"
 claude:
   allowed-tools:
     - Read

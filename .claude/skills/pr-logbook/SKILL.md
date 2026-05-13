@@ -8,7 +8,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.4"
+  version: "1.0.5"
 ---
 
 
