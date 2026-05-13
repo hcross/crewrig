@@ -10,7 +10,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 
@@ -94,6 +94,27 @@ neither — do not over-document.
 ADRs follow the standard sections: Context, Decision, Status, Consequences.
 Keep each section under 10 lines. ADRs that need a 2-page Context have
 not been thought through yet.
+
+### 5. Briefing sub-agents (call-graph context)
+
+When delegating a focused task (tester, security, doc-writer, etc.) to a
+sub-agent, the brief MUST include the **call-graph context** of any file
+the sub-agent will read or evaluate — at minimum:
+
+- The **entry point(s)** that invoke the target file in production paths.
+- **Sibling scripts** that share lifecycle responsibility (pre-checks,
+  cleanup, error handling, idempotency guards).
+- Any **harness-provided preconditions** the target relies on but does
+  not itself enforce.
+
+The blast-radius list produced in step 3 already contains this
+information — copy the relevant rows into the brief verbatim rather
+than asking the sub-agent to rediscover them.
+
+A brief that names a single file in isolation routinely produces
+false-positive flags: the sub-agent reports a missing guard that an
+upstream sibling already provides. Treat this as a brief defect, not
+a sub-agent defect.
 
 ## Grounding discipline
 
