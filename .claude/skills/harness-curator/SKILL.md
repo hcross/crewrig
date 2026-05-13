@@ -10,7 +10,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 
@@ -137,17 +137,19 @@ and `severity:low|med|high`) **must be pre-created** on every repo
 that may receive curator output, before the first `--apply` run.
 A fork maintainer typically does this once at fork setup time.
 
-Recommended creation script (run once per target repo):
+Bootstrap the 9 labels via the bundled script (idempotent — safe to
+re-run after a label vocabulary change):
 
 ```bash
-gh label create harness-feedback --color FBCA04 --description "Auto-curated friction report"
-for room in tool prompt format behavior process; do
-  gh label create "room:$room" --color 0E8A16 --description "Friction category: $room"
-done
-for sev in low med high; do
-  gh label create "severity:$sev" --color "$(test "$sev" = high && echo D93F0B || test "$sev" = med && echo FBCA04 || echo C2E0C6)" --description "Friction severity: $sev"
-done
+bash scripts/setup-labels.sh --repo <owner/repo>
+# Or preview the plan without contacting GitHub:
+bash scripts/setup-labels.sh --repo <owner/repo> --dry-run
 ```
+
+The script uses `gh label create --force` per label, so it creates
+missing labels and updates the color / description of any that already
+exist. Omit `--repo` to target the repo resolved from the current
+working directory's git remote.
 
 If `--apply` fails on a missing label, the script surfaces it as a
 `failures:` entry in the run summary. The maintainer creates the

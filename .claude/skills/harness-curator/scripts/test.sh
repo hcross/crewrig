@@ -325,6 +325,66 @@ if grep -q "stripping to repo root" "$NORM_TMP/err"; then
 fi
 echo "  PASS norm.clean stderr does not contain 'stripping to repo root'"
 
+# --- Smoke test: setup-labels.sh bootstrap (offline, --dry-run only) -----
+# Offline assertions on the dry-run plan — never contacts GitHub. Mirrors
+# the norm.* sub-case shape used in the apply.py normalization block
+# above. Exercises:
+#   (a) plan-line count + shape (proves the LABELS array is intact)
+#   (b) all three label families surface (harness-feedback / room:* /
+#       severity:*) so a partial vocabulary regression cannot pass
+#   (c) usage errors exit non-zero (unknown flag, missing --repo value)
+
+SETUP="$SKILL_DIR/scripts/setup-labels.sh"
+[ -f "$SETUP" ] || { echo "FAIL: setup-labels.sh missing: $SETUP" >&2; exit 1; }
+[ -x "$SETUP" ] || chmod +x "$SETUP"
+
+# setup.dry_run: --dry-run with a valid --repo exits 0 and emits a plan.
+set +e
+SETUP_OUT=$(bash "$SETUP" --repo hcross/crewrig --dry-run 2>/dev/null)
+SETUP_RC=$?
+set -e
+assert "setup.dry_run exit code" "0" "$SETUP_RC"
+
+# setup.plan_count: exactly 9 "would create:" lines (one per label).
+SETUP_PLAN_LINES=$(printf '%s\n' "$SETUP_OUT" | grep -c '^would create: ')
+assert "setup.plan_count (9 labels)" "9" "$SETUP_PLAN_LINES"
+
+# setup.family.*: all three label families present. Separate assertions —
+# a regression that drops one family (e.g. truncated LABELS array) must
+# fail loudly, not be swallowed by a single composite check.
+SETUP_HAS_FEEDBACK=$(printf '%s\n' "$SETUP_OUT" | grep -c '^would create: harness-feedback ')
+SETUP_HAS_ROOM=$(printf '%s\n' "$SETUP_OUT" | grep -c '^would create: room:')
+SETUP_HAS_SEVERITY=$(printf '%s\n' "$SETUP_OUT" | grep -c '^would create: severity:')
+[ "$SETUP_HAS_FEEDBACK" -ge 1 ] || { echo "FAIL setup.family.feedback: missing harness-feedback line" >&2; exit 1; }
+echo "  PASS setup.family.feedback"
+[ "$SETUP_HAS_ROOM"     -ge 1 ] || { echo "FAIL setup.family.room: missing room:* line(s)" >&2; exit 1; }
+echo "  PASS setup.family.room"
+[ "$SETUP_HAS_SEVERITY" -ge 1 ] || { echo "FAIL setup.family.severity: missing severity:* line(s)" >&2; exit 1; }
+echo "  PASS setup.family.severity"
+
+# setup.line_shape: every plan line carries color=<6hex> and a description.
+# `grep -vc` returns the count of NON-matching plan lines — must be zero.
+# `|| true` shields the count==0 case where grep exits 1.
+SETUP_BAD_SHAPE=$(printf '%s\n' "$SETUP_OUT" | grep '^would create: ' \
+  | grep -vcE ' \(color=[0-9A-Fa-f]{6}, description=.+\)$' || true)
+assert "setup.line_shape (color=<6hex>, description=...)" "0" "$SETUP_BAD_SHAPE"
+
+# setup.usage.bogus_flag: unknown argument → non-zero exit.
+set +e
+bash "$SETUP" --bogus >/dev/null 2>&1
+SETUP_BOGUS_RC=$?
+set -e
+[ "$SETUP_BOGUS_RC" -ne 0 ] || { echo "FAIL setup.usage.bogus_flag: expected non-zero exit, got $SETUP_BOGUS_RC" >&2; exit 1; }
+echo "  PASS setup.usage.bogus_flag (rc=$SETUP_BOGUS_RC)"
+
+# setup.usage.repo_no_value: --repo as final arg (no value) → non-zero exit.
+set +e
+bash "$SETUP" --repo >/dev/null 2>&1
+SETUP_NOVALUE_RC=$?
+set -e
+[ "$SETUP_NOVALUE_RC" -ne 0 ] || { echo "FAIL setup.usage.repo_no_value: expected non-zero exit, got $SETUP_NOVALUE_RC" >&2; exit 1; }
+echo "  PASS setup.usage.repo_no_value (rc=$SETUP_NOVALUE_RC)"
+
 # --- Regression: real MemPalace path (no --from-stdin) -------------------
 # This section guards the curate-stdout-hijack bug (issue #62): when
 # curate.py reads from MemPalace, importing `mempalace.mcp_server` swaps
