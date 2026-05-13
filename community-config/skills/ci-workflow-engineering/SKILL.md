@@ -7,10 +7,11 @@ description: "Structured approach for building, debugging, and hardening CI/CD
 type: skill
 license: Apache-2.0
 compatibility: "Requires the gh CLI (for fetching workflow runs and job logs) and bash. Optional: act for local workflow execution."
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

@@ -7,10 +7,11 @@ description: "Implementation skill for writing, modifying, and refactoring
 type: skill
 license: Apache-2.0
 compatibility: "Requires bash (used by scripts/build-components.sh) and git (used for staged-file inspection of executable bits)."
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.3"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

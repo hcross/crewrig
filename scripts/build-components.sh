@@ -95,31 +95,45 @@ validate_canonical_repo() {
 validate_canonical_repo
 
 # --- Provenance propagation ---
-# Components may declare a `provenance:` block in their source frontmatter.
-# This block must travel to every output that supports YAML frontmatter, so
-# installers and the harness curator can read where the component came from.
-# The build only natively copies name+description, so we inject provenance
-# explicitly at the bottom of the output frontmatter.
+# Components may declare a `metadata.provenance:` block in their source
+# frontmatter. This block must travel to every output that supports YAML
+# frontmatter, so installers and the harness curator can read where the
+# component came from. The build only natively copies name+description, so we
+# inject the `metadata:` wrapper explicitly at the bottom of the output
+# frontmatter.
+#
+# Schema note: provenance lives under `metadata:` to keep the root
+# frontmatter restricted to fields recognised by the agentskills.io spec
+# (`name`, `description`, `license`, `compatibility`, `metadata`,
+# `allowed-tools`).
 
-# Returns the provenance YAML block ready to splice into a frontmatter, or
-# empty if `frontmatter` (already extracted) has no `provenance:` key.
+# Returns the YAML block (top-level `metadata:` with a nested `provenance:`)
+# ready to splice into a frontmatter, or empty if `frontmatter` (already
+# extracted) has no `metadata.provenance` key.
 # Takes the frontmatter as input so callers can reuse a single extraction.
 provenance_block() {
   local frontmatter="$1"
   local has_prov
-  has_prov=$(printf '%s\n' "$frontmatter" | yq -r 'has("provenance")' 2>/dev/null || echo "false")
+  has_prov=$(printf '%s\n' "$frontmatter" | yq -r '.metadata // {} | has("provenance")' 2>/dev/null || echo "false")
   if [ "$has_prov" != "true" ]; then
     return 0
   fi
-  printf 'provenance:\n'
+  printf 'metadata:\n'
+  printf '  provenance:\n'
   printf '%s\n' "$frontmatter" \
-    | yq -r '.provenance | to_entries | .[] | "  " + .key + ": \"" + .value + "\""' 2>/dev/null
+    | yq -r '.metadata.provenance | to_entries | .[] | "    " + .key + ": \"" + .value + "\""' 2>/dev/null
 }
 
 # Splice a provenance block before the closing `---` of the first frontmatter
 # of `content`. No-op if the source has no provenance.
 # Uses a tempfile to feed multi-line provenance into awk — BSD awk does not
 # accept newlines in `-v var=...`, so we read the block via getline instead.
+#
+# Coordination note: the spliced block emits a full top-level `metadata:`
+# key (with `provenance:` nested under it). If a future build path also
+# needs to emit `metadata.*` fields into the output frontmatter, it must
+# merge with this splice rather than emit a second `metadata:` key — YAML
+# does not allow duplicate top-level mappings.
 inject_provenance() {
   local content="$1"
   local source="$2"

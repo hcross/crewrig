@@ -4,10 +4,11 @@ description: "Generic documentation agent. Drafts ADRs, READMEs, in-code
   docstrings, and reference material. Optimises for documents that age well
   and stays close to the code where possible."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Doc Writer Agent

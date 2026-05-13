@@ -6,10 +6,11 @@ description: "Test authoring and test-strategy skill. Activate when writing
   high-signal tests that catch regressions, not coverage theatre."
 type: skill
 license: Apache-2.0
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

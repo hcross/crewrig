@@ -4,7 +4,8 @@
 # Per community-config/FORMAT.md → Version semantics, every PR that touches
 # a `community-config/skills/<name>/SKILL.md` or
 # `community-config/agents/<name>/AGENT.md` source MUST bump
-# `provenance.version` in the same diff. This script enforces the rule.
+# `metadata.provenance.version` in the same diff. This script enforces the
+# rule.
 #
 # Usage:
 #   bash scripts/check-skill-versions.sh [<base-ref>]
@@ -56,15 +57,15 @@ failures=()
 for f in "${changed[@]}"; do
   [ ! -f "$f" ] && continue  # deleted file: skip (deletions don't need a bump)
 
-  # Look at the diff for a `version:` line addition. The provenance.version
-  # field is indented under `provenance:` so the line typically reads
-  # `  version: "X.Y.Z"`. We match any added line whose trimmed text starts
-  # with `version:` — covers both the indented form and a hypothetical
-  # top-level placement.
+  # Look at the diff for a `version:` line addition. The
+  # metadata.provenance.version field is nested under `metadata:` →
+  # `provenance:` so the line typically reads `    version: "X.Y.Z"`
+  # (indent 4). We match any added line whose trimmed text starts with
+  # `version:` — covers the nested form and any hypothetical placement.
   if git diff "$BASE_REF" -- "$f" | grep -qE '^\+[[:space:]]+version:[[:space:]]*"'; then
     echo "  OK   $f"
   else
-    echo "  FAIL $f — provenance.version not bumped"
+    echo "  FAIL $f — metadata.provenance.version not bumped"
     failures+=("$f")
   fi
 done
@@ -77,7 +78,7 @@ if [ "${#failures[@]}" -gt 0 ]; then
   done
   echo ""
   echo "Per community-config/FORMAT.md → Version semantics, bump"
-  echo "provenance.version in the same diff. SemVer:"
+  echo "metadata.provenance.version in the same diff. SemVer:"
   echo "  PATCH (1.0.0 → 1.0.1) — friction fix / wording change"
   echo "  MINOR (1.0.0 → 1.1.0) — additive (new section, new field)"
   echo "  MAJOR (1.0.0 → 2.0.0) — breaking contract change"
