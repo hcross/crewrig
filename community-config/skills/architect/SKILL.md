@@ -6,10 +6,11 @@ description: "Design and architecture skill for ADRs, RFCs, design reviews,
   the user explicitly asks for a design opinion or alternatives."
 type: skill
 license: Apache-2.0
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.4"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

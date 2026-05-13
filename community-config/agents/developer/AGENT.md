@@ -3,10 +3,11 @@ name: developer
 description: "Generic implementation agent. Writes, edits, and refactors code
   with the smallest correct change. Verifies locally before reporting done."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Developer Agent

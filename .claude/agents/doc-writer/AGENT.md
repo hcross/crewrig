@@ -1,10 +1,11 @@
 ---
 name: doc-writer
 description: "Generic documentation agent. Drafts ADRs, READMEs, in-code docstrings, and reference material. Optimises for documents that age well and stays close to the code where possible."
-provenance:
-  canonical: "https://github.com/hcross/crewrig"
-  feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "https://github.com/hcross/crewrig"
+    feedback: "https://github.com/hcross/crewrig"
+    version: "1.1.0"
 ---
 
 

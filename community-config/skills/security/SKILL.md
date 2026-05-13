@@ -6,10 +6,11 @@ description: "Security review skill for threat modeling, dependency audit,
   parsing, deserialization, network calls, or upgrades to dependencies."
 type: skill
 license: Apache-2.0
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

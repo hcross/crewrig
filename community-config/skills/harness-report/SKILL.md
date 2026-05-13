@@ -6,10 +6,11 @@ description: "Tag a friction encountered during real work. Activate the moment
   the friction-tagging protocol — all other skills point here."
 type: skill
 license: Apache-2.0
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.2"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

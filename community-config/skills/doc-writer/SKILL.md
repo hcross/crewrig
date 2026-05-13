@@ -6,10 +6,11 @@ description: "Documentation skill for ADRs, READMEs, in-code docstrings, and
   architect skill's output. Optimised for documents that age well."
 type: skill
 license: Apache-2.0
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 claude:
   allowed-tools:
     - Read

@@ -4,10 +4,11 @@ description: "Generic test-authoring agent. Writes high-signal regression tests,
   enumerates priority edge cases, and verifies fixes by failing-then-passing
   the test against the bug."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Tester Agent

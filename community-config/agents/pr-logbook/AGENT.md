@@ -4,10 +4,11 @@ description: "Generic PR and logbook composer agent. Drafts titles, bodies,
   test plans, logbook entries, and squash-merge commit messages that conform
   to the project's AGENTS.md conventions."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # PR & Logbook Agent

@@ -77,6 +77,7 @@ Detailed instructions, workflows, constraints...
 | `name` | string | Component identifier (kebab-case) |
 | `description` | string | Brief description for discovery. Used by both tools. |
 | `type` | string | `skill`, `command`, or `agent` |
+| `metadata` | mapping | Optional container recognised by the agentskills.io spec for non-standard keys. crewrig curates `metadata.provenance` here (see [Provenance & Forks](#provenance--forks)). |
 
 ### Gemini CLI Overrides (optional)
 
@@ -185,10 +186,11 @@ Gemini CLI → `.gemini/agents/<name>.md`
 ---
 name: <name>
 description: <description>
-provenance:        # propagated when present in source
-  canonical: ...
-  feedback: ...
-  version: ...
+metadata:          # propagated when source declares metadata.provenance
+  provenance:
+    canonical: ...
+    feedback: ...
+    version: ...
 ---
 <body — becomes the agent's system prompt>
 ```
@@ -205,19 +207,27 @@ description: <description>
 
 ## Provenance & Forks
 
-Components carry a `provenance:` block in their frontmatter that survives
-forks and lets feedback flow back to the right repo. The block is
-optional but recommended for any component intended to be re-shared.
+Components carry a `metadata.provenance:` block in their frontmatter that
+survives forks and lets feedback flow back to the right repo. The block
+is optional but recommended for any component intended to be re-shared.
+
+`provenance` lives under `metadata:` to keep the root frontmatter
+restricted to fields recognised by the
+[agentskills.io specification](https://agentskills.io/specification)
+(`name`, `description`, `license`, `compatibility`, `metadata`,
+`allowed-tools`). The spec reserves `metadata:` for non-standard keys —
+crewrig curates `provenance` there.
 
 ```yaml
 ---
 name: my-component
 description: "..."
 type: skill
-provenance:
-  canonical: "${CANONICAL_REPO}"   # origin (audit + license trace)
-  feedback:  "${FEEDBACK_REPO}"    # MR target (defaults to canonical)
-  version:   "1.0.0"               # version at build/import
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"   # origin (audit + license trace)
+    feedback:  "${FEEDBACK_REPO}"    # MR target (defaults to canonical)
+    version:   "1.0.0"               # version at build/import
 ---
 ```
 
@@ -234,9 +244,9 @@ feedback_repo  = "https://github.com/hcross/crewrig"
 
 The build substitutes every `${KEY}` placeholder it encounters in the
 generated outputs (`.gemini/`, `.claude/`) — frontmatter **and** body —
-not only inside the `provenance:` block. This is intentional: components
-may reference `${CANONICAL_REPO}` or other config keys in their prompt
-body too. Source files keep the placeholders untouched.
+not only inside the `metadata.provenance:` block. This is intentional:
+components may reference `${CANONICAL_REPO}` or other config keys in
+their prompt body too. Source files keep the placeholders untouched.
 
 ### Forking workflow
 
@@ -251,13 +261,14 @@ When you fork crewrig (or a fork of it):
    values.
 3. Commit both `crewrig.config.toml` and the regenerated outputs.
 
-The `version:` field in `provenance:` is a literal per-component
-string, not a placeholder. It tracks the component's own evolution
-independently from the host repo.
+The `version:` field in `metadata.provenance:` is a literal
+per-component string, not a placeholder. It tracks the component's own
+evolution independently from the host repo.
 
 ### Version semantics (SemVer)
 
-The `version:` field follows [Semantic Versioning](https://semver.org/)
+The `metadata.provenance.version` field follows
+[Semantic Versioning](https://semver.org/)
 (`MAJOR.MINOR.PATCH`):
 
 | Bump | When |
@@ -267,8 +278,8 @@ The `version:` field follows [Semantic Versioning](https://semver.org/)
 | **MAJOR** (`1.1.0 → 2.0.0`) | Breaking contract change. Removed payload fields, renamed required fields, semantics flip. Forks pinning `1.x` need to migrate consciously. |
 
 **Bump rule.** Every PR that touches a `SKILL.md` or `AGENT.md`
-source under `community-config/` MUST bump `provenance.version` in
-the same diff. CI enforces this via `scripts/check-skill-versions.sh`
+source under `community-config/` MUST bump `metadata.provenance.version`
+in the same diff. CI enforces this via `scripts/check-skill-versions.sh`
 (see `task check-skill-versions` for the local invocation). The
 rationale:
 
@@ -284,7 +295,7 @@ rationale:
 The bump goes in the same PR as the change. A "version-only bump" PR
 is not a thing — it always accompanies a content edit.
 
-### Components without a `provenance:` block
+### Components without a `metadata.provenance:` block
 
 Components shipped before the provenance contract existed (or
 intentionally unscoped) build unchanged — the resolver only acts on

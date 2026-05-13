@@ -5,10 +5,11 @@ description: "Generic harness-curator agent. On-demand reader of the global
   issue per cluster against the canonical/feedback repos. The fix MR lands
   later (human-authored or via auto-fix mode #42)."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Harness Curator Agent

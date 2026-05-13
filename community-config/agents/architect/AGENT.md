@@ -3,10 +3,11 @@ name: architect
 description: "Generic architecture agent. Drafts ADRs, runs design reviews,
   proposes alternatives with explicit trade-offs, and maps blast radius."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Architect Agent

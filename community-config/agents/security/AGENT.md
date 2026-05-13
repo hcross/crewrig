@@ -4,10 +4,11 @@ description: "Generic security review agent. Threat modeling, secret hygiene,
   realistic-threat code review, dependency audit. Findings only — does not
   implement fixes unless explicitly asked."
 type: agent
-provenance:
-  canonical: "${CANONICAL_REPO}"
-  feedback: "${FEEDBACK_REPO}"
-  version: "1.0.0"
+metadata:
+  provenance:
+    canonical: "${CANONICAL_REPO}"
+    feedback: "${FEEDBACK_REPO}"
+    version: "1.1.0"
 ---
 
 # Security Agent
