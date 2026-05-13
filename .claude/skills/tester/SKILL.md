@@ -10,10 +10,11 @@ allowed-tools:
   - Grep
   - Glob
 user-invocable: true
-provenance:
-  canonical: "https://github.com/hcross/crewrig"
-  feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "https://github.com/hcross/crewrig"
+    feedback: "https://github.com/hcross/crewrig"
+    version: "1.1.0"
 ---
 
 

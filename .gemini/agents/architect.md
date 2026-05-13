@@ -1,10 +1,11 @@
 ---
 name: architect
 description: "Generic architecture agent. Drafts ADRs, runs design reviews, proposes alternatives with explicit trade-offs, and maps blast radius."
-provenance:
-  canonical: "https://github.com/hcross/crewrig"
-  feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.1"
+metadata:
+  provenance:
+    canonical: "https://github.com/hcross/crewrig"
+    feedback: "https://github.com/hcross/crewrig"
+    version: "1.1.0"
 ---
 
 

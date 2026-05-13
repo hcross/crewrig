@@ -2,10 +2,11 @@
 name: architect
 description: "Design and architecture skill for ADRs, RFCs, design reviews, and ripple-effect analysis. Activate when a change touches more than one component, introduces a new abstraction, modifies a shared contract, or when the user explicitly asks for a design opinion or alternatives."
 license: Apache-2.0
-provenance:
-  canonical: "https://github.com/hcross/crewrig"
-  feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.4"
+metadata:
+  provenance:
+    canonical: "https://github.com/hcross/crewrig"
+    feedback: "https://github.com/hcross/crewrig"
+    version: "1.1.0"
 ---
 
 
