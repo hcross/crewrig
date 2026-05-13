@@ -66,6 +66,20 @@ WING = os.environ.get("FRICTION_WING", "harness-friction")
 THRESHOLD = int(os.environ.get("THRESHOLD", "2"))
 TARGET_OVERRIDE = os.environ.get("TARGET_REPO_OVERRIDE", "").strip()
 STDIN_FILE = os.environ.get("FROM_STDIN_FILE", "").strip()
+DEEP_MODE = os.environ.get("DEEP_MODE", "false").lower() == "true"
+DEEP_WINDOW = int(os.environ.get("DEEP_WINDOW", "500"))
+
+# Heuristic keyword patterns for --deep pre-filter (label → regex)
+_DEEP_HEURISTICS: Dict[str, str] = {
+    "FAILED":        r"\bfailed\b",
+    "error":         r"\berror\b",
+    "retry":         r"\bretry\b",
+    "didn't work":   r"didn.t work",
+    "not working":   r"not working",
+    "unexpected":    r"\bunexpected\b",
+    "broken":        r"\bbroken\b",
+    "try again":     r"try again",
+}
 
 # Keep the page size aligned with prune-transcripts.sh: 100 is the sweet spot
 # between MCP roundtrips and per-call payload size.
@@ -413,10 +427,131 @@ def cluster_labels(cluster: List[Dict[str, Any]]) -> List[str]:
     ]
 
 
+# --- Deep mode ------------------------------------------------------------
+
+
+def read_transcripts_window(window: int) -> List[Dict[str, Any]]:
+    """Read at most `window` drawers from wing=transcripts (most recent first)."""
+    try:
+        from mempalace.mcp_server import tool_get_drawer, tool_list_drawers
+    except ImportError as e:
+        print(f"Error: failed to import mempalace ({e}).", file=sys.stderr)
+        sys.exit(2)
+    drawers: List[Dict[str, Any]] = []
+    offset = 0
+    while len(drawers) < window:
+        page_size = min(PAGE_SIZE, window - len(drawers))
+        page = tool_list_drawers(wing="transcripts", limit=page_size, offset=offset)
+        batch = page.get("drawers", [])
+        if not batch:
+            break
+        for stub in batch:
+            did = stub.get("drawer_id")
+            if not did:
+                continue
+            full = tool_get_drawer(drawer_id=did)
+            drawers.append({
+                "drawer_id": did,
+                "room": full.get("room", "") or stub.get("room", ""),
+                "content": full.get("content", ""),
+                "filed_at": (full.get("metadata") or {}).get("filed_at", ""),
+            })
+        if len(batch) < page_size:
+            break
+        offset += page_size
+    return drawers
+
+
+def _deep_excerpt(content: str, pattern: str) -> str:
+    """Return the first line containing `pattern` (capped at 120 chars)."""
+    for line in content.splitlines():
+        if re.search(pattern, line, re.IGNORECASE):
+            excerpt = line.strip()
+            return excerpt[:120] + "…" if len(excerpt) > 120 else excerpt
+    return ""
+
+
+def compose_deep_review(
+    candidates: List[Dict[str, Any]],
+    total_scanned: int,
+    window: int,
+) -> str:
+    """Compose a Markdown review document from heuristic candidates."""
+    import datetime
+    today = datetime.date.today().isoformat()
+    by_pattern: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for c in candidates:
+        for pat_label in c["matched_patterns"]:
+            by_pattern[pat_label].append(c)
+
+    lines: List[str] = [
+        f"# Harness Deep Sweep — {today}",
+        "",
+        f"Scanned **{total_scanned}** drawers from `wing=transcripts` (window: {window}).",
+        f"Pre-filtered to **{len(candidates)}** candidate drawers matching heuristic patterns.",
+        "",
+        "> Tick the items you want to promote to real friction tags, then run `/harness-report`",
+        "> for each one to create a `FRICTION:` payload in `wing=harness-friction`.",
+        "",
+    ]
+    for pat_label, items in sorted(by_pattern.items(), key=lambda kv: -len(kv[1])):
+        pattern_re = _DEEP_HEURISTICS[pat_label]
+        lines.append(
+            f"## Pattern: `{pat_label}` "
+            f"({len(items)} occurrence{'s' if len(items) != 1 else ''})"
+        )
+        lines.append("")
+        shown = items[:20]
+        for item in shown:
+            date = item["filed_at"].split("T")[0] if item.get("filed_at") else "unknown"
+            lines.append(
+                f"- [ ] Drawer `{item['drawer_id']}` "
+                f"(room: `{item['room'] or '?'}`, date: {date})"
+            )
+            excerpt = _deep_excerpt(item["content"], pattern_re)
+            if excerpt:
+                lines.append(f"  > {excerpt}")
+        if len(items) > 20:
+            lines.append(f"  _({len(items) - 20} more occurrences not shown)_")
+        lines.append("")
+    lines += [
+        "## Next steps",
+        "",
+        "For each ticked item, run `/harness-report` to tag it as a `FRICTION:` payload "
+        "in `wing=harness-friction`. It will appear in the next regular curator sweep.",
+    ]
+    return "\n".join(lines)
+
+
 # --- Main -----------------------------------------------------------------
 
 
 def main() -> int:
+    if DEEP_MODE:
+        if STDIN_FILE:
+            try:
+                drawers = read_from_stdin_file()
+            except (OSError, ValueError) as e:
+                print(f"Error: failed to read stdin JSON: {e}", file=sys.stderr)
+                return 2
+        else:
+            drawers = read_transcripts_window(DEEP_WINDOW)
+        candidates = []
+        for drawer in drawers:
+            content = drawer.get("content", "")
+            matched = [
+                label
+                for label, pat in _DEEP_HEURISTICS.items()
+                if re.search(pat, content, re.IGNORECASE)
+            ]
+            if matched:
+                candidates.append({**drawer, "matched_patterns": matched})
+        review = compose_deep_review(candidates, len(drawers), DEEP_WINDOW)
+        _REAL_STDOUT.write(review)
+        _REAL_STDOUT.write("\n")
+        _REAL_STDOUT.flush()
+        return 0
+
     if STDIN_FILE:
         try:
             drawers = read_from_stdin_file()

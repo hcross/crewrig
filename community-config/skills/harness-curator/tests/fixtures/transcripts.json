@@ -1,0 +1,26 @@
+[
+  {
+    "drawer_id": "t-fixture-001",
+    "room": "prompt",
+    "content": "Error: tool call failed with status 500\nThe agent retried but the error persisted.",
+    "filed_at": "2026-05-13T10:00:00"
+  },
+  {
+    "drawer_id": "t-fixture-002",
+    "room": "context",
+    "content": "retry attempt 3 of 5 — still not working, giving up.",
+    "filed_at": "2026-05-13T11:00:00"
+  },
+  {
+    "drawer_id": "t-fixture-003",
+    "room": "prompt",
+    "content": "The task completed successfully. No issues encountered.",
+    "filed_at": "2026-05-13T12:00:00"
+  },
+  {
+    "drawer_id": "t-fixture-004",
+    "room": "tools",
+    "content": "Unexpected response from API: missing required field 'id'.",
+    "filed_at": "2026-05-13T13:00:00"
+  }
+]

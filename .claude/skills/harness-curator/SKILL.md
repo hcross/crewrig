@@ -1,6 +1,6 @@
 ---
 name: harness-curator
-description: "Harness feedback-loop curator. Activate on demand to read friction tags from the global harness-friction wing, cluster them, and open one descriptive issue per cluster on the canonical/feedback repos declared in components' provenance blocks. The fix MR lands later (human-authored or via the auto-fix mode tracked in #42)."
+description: "Harness feedback-loop curator. Activate on demand to read friction tags from the global harness-friction wing, cluster them, and open one descriptive issue per cluster on the canonical/feedback repos declared in components' provenance blocks. The fix MR lands later (human-authored or via the auto-fix mode tracked in #42). Also supports a `--deep` mode that sweeps `wing=transcripts` with heuristic pre-filtering and emits a Markdown review document for triage."
 license: Apache-2.0
 compatibility: "Requires bash, jq, the gh CLI (used by setup-labels.sh and --apply), and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4')."
 allowed-tools:
@@ -13,7 +13,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.2.0"
+    version: "1.3.0"
 ---
 
 
@@ -158,9 +158,35 @@ If `--apply` fails on a missing label, the script surfaces it as a
 `failures:` entry in the run summary. The maintainer creates the
 label and retries.
 
-`--deep` mode (sweep `wing="transcripts"` for unflagged friction
-patterns) is **out of V0 scope** — tracked in issue #43. Auto mode is
-tracked in issue #42.
+### --deep mode
+
+Run a heuristic sweep of `wing="transcripts"` instead of the regular
+`wing="harness-friction"` curation. Useful for catching frictions that
+slipped through the recognition signals and were never tagged.
+
+```bash
+bash scripts/curate.sh --deep
+# Tune the scan window (default: 500 most-recent transcript drawers):
+bash scripts/curate.sh --deep --deep-window 1000
+```
+
+Behavior:
+
+- Reads up to `--deep-window` drawers from `wing="transcripts"` (most
+  recent first).
+- Pre-filters each drawer against a fixed set of heuristic regex
+  patterns (`error`, `failed`, `retry`, `not working`, `unexpected`,
+  `broken`, `didn't work`, `try again`).
+- Emits a **Markdown review document** on stdout — not JSON, not
+  issues. Each candidate appears as a checkbox item grouped by pattern,
+  with a one-line excerpt for triage.
+- Incompatible with `--apply`: the script exits with an error if both
+  are passed. Deep mode is a discovery aid, not an issue-opening path.
+  To promote a candidate, the human (or agent) runs `/harness-report`
+  for it, which lands a `FRICTION:` payload in `wing="harness-friction"`
+  for the next regular sweep.
+
+Auto mode is tracked in issue #42.
 
 ### 5. Run summary
 
