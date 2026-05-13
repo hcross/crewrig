@@ -19,7 +19,7 @@ AGENT_LABEL="${MEMPALACE_HISTORY_AGENT:-claude-code}"
 EXTRACT_MODE="${MEMPALACE_EXTRACT:-exchange}"
 
 echo "===================================================="
-echo "  Claude Code -> MemPalace history import"
+echo "  Claude Code → MemPalace history import"
 echo "===================================================="
 echo ""
 

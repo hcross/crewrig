@@ -20,7 +20,7 @@ AGENT_LABEL="${MEMPALACE_HISTORY_AGENT:-gemini-cli}"
 EXTRACT_MODE="${MEMPALACE_EXTRACT:-exchange}"
 
 echo "===================================================="
-echo "  Gemini CLI -> MemPalace history import"
+echo "  Gemini CLI → MemPalace history import"
 echo "===================================================="
 echo ""
 
