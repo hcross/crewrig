@@ -12,7 +12,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 
@@ -72,6 +72,11 @@ Before reporting a task as done, run:
   `bash scripts/build-components.sh --check` to confirm drift-free.
   This is non-optional — the CI `check-components` job rejects PRs
   where source and bundles disagree.
+- For changes that include shell scripts: after any push via the MCP
+  `push_files` tool (which strips file modes), verify the executable
+  bit survived. `git ls-files --stage -- '*.sh'` must show `100755`,
+  or `ls -la` show `755`. Restore with `git update-index --chmod=+x
+  <file>` before the next push.
 
 If the project has no test or type-check infrastructure, say so
 explicitly in the report — do not claim verification you did not do.

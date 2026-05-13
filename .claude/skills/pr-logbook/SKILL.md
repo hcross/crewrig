@@ -8,7 +8,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 
@@ -107,6 +107,15 @@ Co-authored-by lines, if any.
 ```
 
 Do not paste the entire PR description. The commit message is denser.
+
+### 6. Pre-push sanity checks
+
+Text-only tooling silently drops file metadata. Verify before pushing:
+
+- If the diff touches shell scripts, confirm executable bits survived
+  the round-trip: `git ls-files --stage -- '*.sh'` must show `100755`,
+  not `100644`. The MCP `push_files` tool strips the exec bit. Restore
+  with `git update-index --chmod=+x <file>` and amend before pushing.
 
 ## Cross-cutting: skill / agent source version bumps
 
