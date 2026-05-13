@@ -6,7 +6,7 @@ description: "Implementation skill for writing, modifying, and refactoring
   loops, and minimal surface area per change."
 type: skill
 license: Apache-2.0
-compatibility: Requires bash (used by scripts/build-components.sh) and git (used for staged-file inspection of executable bits).
+compatibility: "Requires bash (used by scripts/build-components.sh) and git (used for staged-file inspection of executable bits)."
 provenance:
   canonical: "${CANONICAL_REPO}"
   feedback: "${FEEDBACK_REPO}"
