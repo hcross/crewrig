@@ -83,6 +83,17 @@ resolve_placeholders() {
 
 load_crewrig_config
 
+validate_canonical_repo() {
+  local repo="${CFG_CANONICAL_REPO:-}"
+  [ -z "$repo" ] && return 0   # placeholder absent → resolve_placeholders leaves ${CANONICAL_REPO} literal; not our concern
+  if [[ ! "$repo" =~ ^https://[^/[:space:]]+/[^/[:space:]]+/[^/[:space:]]+/?$ ]]; then
+    echo "Error: canonical_repo in crewrig.config.toml is malformed: '$repo'" >&2
+    echo "Expected: https://<host>/<owner>/<repo> (no deeper path, no file:// scheme)" >&2
+    exit 1
+  fi
+}
+validate_canonical_repo
+
 # --- Provenance propagation ---
 # Components may declare a `provenance:` block in their source frontmatter.
 # This block must travel to every output that supports YAML frontmatter, so
