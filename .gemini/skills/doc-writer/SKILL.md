@@ -1,6 +1,7 @@
 ---
 name: doc-writer
 description: "Documentation skill for ADRs, READMEs, in-code docstrings, and reference material. Activate when the user asks for documentation, when a public contract changes without docs, or when an ADR is needed per the architect skill's output. Optimised for documents that age well."
+license: Apache-2.0
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"

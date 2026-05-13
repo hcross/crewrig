@@ -1,6 +1,7 @@
 ---
 name: security
 description: "Security review skill for threat modeling, dependency audit, secret hygiene, and code review through a security lens. Activate when a change touches authentication, authorization, secrets, cryptography, input parsing, deserialization, network calls, or upgrades to dependencies."
+license: Apache-2.0
 allowed-tools:
   - Read
   - Grep

@@ -1,6 +1,8 @@
 ---
 name: ci-workflow-engineering
 description: "Structured approach for building, debugging, and hardening CI/CD pipelines. Activate when the agent needs to: create new workflow definitions, diagnose failing jobs, validate pipeline changes on a branch before merge, or integrate platform-specific resources (secrets, registries, certificates)."
+license: Apache-2.0
+compatibility: "Requires the gh CLI (for fetching workflow runs and job logs) and bash. Optional: act for local workflow execution."
 allowed-tools:
   - Read
   - Write
@@ -12,7 +14,7 @@ user-invocable: true
 provenance:
   canonical: "https://github.com/hcross/crewrig"
   feedback: "https://github.com/hcross/crewrig"
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 

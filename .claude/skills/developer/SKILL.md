@@ -1,6 +1,8 @@
 ---
 name: developer
 description: "Implementation skill for writing, modifying, and refactoring code. Activate by default for any coding task that does not warrant the architect skill. Optimised for parallelisable execution, fast feedback loops, and minimal surface area per change."
+license: Apache-2.0
+compatibility: "Requires bash (used by scripts/build-components.sh) and git (used for staged-file inspection of executable bits)."
 allowed-tools:
   - Read
   - Write

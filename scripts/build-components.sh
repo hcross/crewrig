@@ -275,11 +275,25 @@ build_skills() {
 
     # --- Gemini CLI output ---
     if [ "$TARGET" = "gemini" ] || [ "$TARGET" = "all" ]; then
+      local license compatibility
+      license=$(yaml_field "$source" "license")
+      compatibility=$(yaml_field "$source" "compatibility")
+
+      local gemini_frontmatter="name: $name
+description: \"$description\""
+      if [ -n "$license" ] && [ "$license" != "null" ]; then
+        gemini_frontmatter="$gemini_frontmatter
+license: $license"
+      fi
+      if [ -n "$compatibility" ] && [ "$compatibility" != "null" ]; then
+        gemini_frontmatter="$gemini_frontmatter
+compatibility: \"$compatibility\""
+      fi
+
       local gemini_content
       gemini_content=$(cat <<GEMINI_EOF
 ---
-name: $name
-description: "$description"
+$gemini_frontmatter
 ---
 
 $body
@@ -293,6 +307,18 @@ GEMINI_EOF
     if [ "$TARGET" = "claude" ] || [ "$TARGET" = "all" ]; then
       local claude_frontmatter="name: $name
 description: \"$description\""
+
+      local license compatibility
+      license=$(yaml_field "$source" "license")
+      compatibility=$(yaml_field "$source" "compatibility")
+      if [ -n "$license" ] && [ "$license" != "null" ]; then
+        claude_frontmatter="$claude_frontmatter
+license: $license"
+      fi
+      if [ -n "$compatibility" ] && [ "$compatibility" != "null" ]; then
+        claude_frontmatter="$claude_frontmatter
+compatibility: \"$compatibility\""
+      fi
 
       # Add Claude-specific fields if present
       local allowed_tools
