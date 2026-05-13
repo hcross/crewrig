@@ -3,7 +3,7 @@
     {
       "event": "BeforeTool",
       "matcher": "*",
-      "name": "SKELETON_NAME-logger",
+      "name": "${SKELETON_NAME}-logger",
       "type": "command",
       "command": "bash ${extensionPath}/hooks/logger.sh"
     }

@@ -1,9 +1,9 @@
 ---
-name: SKELETON_NAME:sample-skill
-description: "Activate when the user needs SKELETON_NAME-specific assistance."
+name: ${SKELETON_NAME}:sample-skill
+description: "Activate when the user needs ${SKELETON_NAME}-specific assistance."
 ---
 
-# SKELETON_NAME Sample Skill
+# ${SKELETON_NAME} Sample Skill
 
 Replace this content with the actual skill workflow.
 

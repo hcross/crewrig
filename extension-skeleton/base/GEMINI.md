@@ -1,6 +1,6 @@
-# SKELETON_NAME Context
+# ${SKELETON_NAME} Context
 
-Loaded when the SKELETON_NAME extension is active. Describes the
+Loaded when the ${SKELETON_NAME} extension is active. Describes the
 extension's purpose and available capabilities to the agent.
 
 ## Capabilities

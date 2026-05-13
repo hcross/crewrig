@@ -51,7 +51,7 @@ done <<< "$COMPONENTS"
 # --- Replace SKELETON_NAME placeholder ---
 find "$TARGET" -type f | while read -r file; do
   if file "$file" | grep -q text; then
-    sed -i.bak "s/SKELETON_NAME/$NAME/g" "$file"
+    sed -i.bak "s/\${SKELETON_NAME}/$NAME/g" "$file"
     rm -f "$file.bak"
   fi
 done

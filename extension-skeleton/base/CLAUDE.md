@@ -1,4 +1,4 @@
-# SKELETON_NAME Extension
+# ${SKELETON_NAME} Extension
 
 Context file loaded when this extension is active in Claude Code.
 

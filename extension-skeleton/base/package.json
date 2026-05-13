@@ -1,5 +1,5 @@
 {
-  "name": "SKELETON_NAME-extension",
+  "name": "${SKELETON_NAME}-extension",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
