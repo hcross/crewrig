@@ -90,6 +90,10 @@ assert "stats.clusters_parked"     "1" "$(echo "$OUT" | jq -r '.stats.clusters_p
 # No routing failures (every cluster has canonical: set in the fixture)
 assert "stats.routing_failures"    "0" "$(echo "$OUT" | jq -r '.stats.routing_failures')"
 
+# Schema stability: clusters_truncated is always present, 0 when --max-issues
+# is unset. Tests below exercise the >0 path.
+assert "stats.clusters_truncated"  "0" "$(echo "$OUT" | jq -r '.stats.clusters_truncated')"
+
 # Exactly 2 clusters in output
 assert "len(.clusters)"            "2" "$(echo "$OUT" | jq -r '.clusters | length')"
 
@@ -258,6 +262,107 @@ echo "$EMPTY_OUT" | grep -q "No clusters above threshold; no issues to open." ||
   exit 1
 }
 echo "  PASS apply --dry-run-apply emits no-clusters notice"
+
+# --- Auto mode (#42): dedup_match wire shape ------------------------------
+# Without --dedup, apply.py must still emit a dedup_match object line per
+# cluster carrying `null`, keeping the wire shape uniform across modes.
+# With --dedup but no matching open issue (or a `gh` failure), the dedup
+# probe fails open and dedup_match is null. We can't safely assert the
+# match-found case offline without stubbing `gh`, so this regression
+# focuses on the always-emitted shape.
+APPLY_DEDUP_OBJECTS=$(printf '%s\n' "$APPLY_OUT" | jq -c 'select(type == "object" and has("dedup_match"))' 2>/dev/null || true)
+APPLY_DEDUP_COUNT=$(printf '%s\n' "$APPLY_DEDUP_OBJECTS" | grep -c .)
+assert "apply --dry-run-apply emits one dedup_match object per cluster" \
+  "2" "$APPLY_DEDUP_COUNT"
+
+# Both dedup_match values must be null in the baseline (no --dedup, no
+# live `gh` probe). jq emits 'null' (4 chars) for JSON null.
+APPLY_DEDUP_NONNULL=$(printf '%s\n' "$APPLY_DEDUP_OBJECTS" \
+  | jq -rc 'select(.dedup_match != null)' | grep -c . || true)
+assert "apply (no --dedup): all dedup_match values are null" \
+  "0" "$APPLY_DEDUP_NONNULL"
+
+# --- Auto mode (#42): --max-issues truncation ----------------------------
+# Synthesize 7 qualifying frictions across distinct subcategories with mixed
+# severities, then run curate with --max-issues 3 and assert the output
+# carries 3 clusters in the documented order (severity high → med → low,
+# size desc, key asc as tie-breaker) plus stats.clusters_truncated == 4.
+
+MAX_FIXTURE=$(mktemp -t crewrig-max.XXXXXX)
+trap 'rm -f "$MAX_FIXTURE"' EXIT
+cat > "$MAX_FIXTURE" <<'JSON'
+[
+  {"drawer_id":"m-1","room":"prompt","content":"FRICTION: low-A\n\nwriter_agent: t\nsubcategory: aaa-low\ncanonical: https://github.com/hcross/crewrig\nseverity: low\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-2","room":"prompt","content":"FRICTION: low-B\n\nwriter_agent: t\nsubcategory: aaa-low\ncanonical: https://github.com/hcross/crewrig\nseverity: low\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-3","room":"prompt","content":"FRICTION: med-A\n\nwriter_agent: t\nsubcategory: bbb-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-4","room":"prompt","content":"FRICTION: med-B\n\nwriter_agent: t\nsubcategory: bbb-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-5","room":"prompt","content":"FRICTION: med-C\n\nwriter_agent: t\nsubcategory: ccc-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-6","room":"prompt","content":"FRICTION: med-D\n\nwriter_agent: t\nsubcategory: ccc-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-7","room":"tool","content":"FRICTION: high-singleton\n\nwriter_agent: t\nsubcategory: zzz-high\ncanonical: https://github.com/hcross/crewrig\nseverity: high\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-8","room":"prompt","content":"FRICTION: med-E\n\nwriter_agent: t\nsubcategory: ddd-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"},
+  {"drawer_id":"m-9","room":"prompt","content":"FRICTION: med-F\n\nwriter_agent: t\nsubcategory: ddd-med\ncanonical: https://github.com/hcross/crewrig\nseverity: med\nevidence:\n  - x.md:1\n"}
+]
+JSON
+
+set +e
+MAX_OUT=$(bash "$SCRIPT" --from-stdin --dry-run --max-issues 3 < "$MAX_FIXTURE")
+MAX_RC=$?
+set -e
+assert "max-issues exit code" "0" "$MAX_RC"
+
+# 5 qualifying clusters: aaa-low (size 2), bbb-med (2), ccc-med (2), ddd-med (2),
+# zzz-high (1 — bypass via severity:high). --max-issues 3 keeps 3, truncates 2.
+assert "max-issues clusters_above_threshold (pre-truncation)" "5" \
+  "$(echo "$MAX_OUT" | jq -r '.stats.clusters_above_threshold')"
+assert "max-issues clusters_truncated"           "2"           \
+  "$(echo "$MAX_OUT" | jq -r '.stats.clusters_truncated')"
+assert "max-issues output length"                "3"           \
+  "$(echo "$MAX_OUT" | jq -r '.clusters | length')"
+
+# Ranking: severity high first, then med clusters by cluster_key asc (all size 2).
+# aaa-low (size 2, severity low) ranks last and is the one truncated out.
+assert "max-issues rank[0].cluster_key (high-severity)" "zzz-high" \
+  "$(echo "$MAX_OUT" | jq -r '.clusters[0].cluster_key')"
+assert "max-issues rank[1].cluster_key (med, asc)"      "bbb-med"  \
+  "$(echo "$MAX_OUT" | jq -r '.clusters[1].cluster_key')"
+assert "max-issues rank[2].cluster_key (med, asc)"      "ccc-med"  \
+  "$(echo "$MAX_OUT" | jq -r '.clusters[2].cluster_key')"
+
+# --max-issues 0 (default) must leave behaviour unchanged: all 5 clusters
+# present, clusters_truncated == 0.
+set +e
+MAX0_OUT=$(bash "$SCRIPT" --from-stdin --dry-run --max-issues 0 < "$MAX_FIXTURE")
+MAX0_RC=$?
+set -e
+assert "max-issues=0 exit code"           "0" "$MAX0_RC"
+assert "max-issues=0 output length"       "5" "$(echo "$MAX0_OUT" | jq -r '.clusters | length')"
+assert "max-issues=0 clusters_truncated"  "0" "$(echo "$MAX0_OUT" | jq -r '.stats.clusters_truncated')"
+
+# --- Auto mode (#42): schedule-curator.sh dry-run smoke ------------------
+# Offline assertion: --dry-run must emit the platform-appropriate config
+# blob (plist on Darwin, cron line on Linux) plus the reactive-trigger
+# tail message, and exit 0. The interactive fzf prompts make a real
+# dry-run un-scriptable here, but a non-interactive surface check on the
+# --uninstall path proves the script wires up correctly without an
+# installed entry.
+SCHEDULER="$SKILL_DIR/scripts/schedule-curator.sh"
+[ -f "$SCHEDULER" ] || { echo "FAIL: schedule-curator.sh missing: $SCHEDULER" >&2; exit 1; }
+[ -x "$SCHEDULER" ] || { echo "FAIL: schedule-curator.sh not executable" >&2; exit 1; }
+echo "  PASS schedule-curator.sh exists and is executable"
+
+# --uninstall on a clean machine must exit 0 with a "nothing to remove"
+# message. This validates the script parses args and dispatches on uname.
+set +e
+SCHED_OUT=$(bash "$SCHEDULER" --uninstall 2>&1)
+SCHED_RC=$?
+set -e
+assert "schedule-curator.sh --uninstall exit code (clean machine)" "0" "$SCHED_RC"
+echo "$SCHED_OUT" | grep -qi "nothing to remove\|removed" || {
+  echo "FAIL schedule-curator.sh --uninstall: unexpected output" >&2
+  echo "$SCHED_OUT" >&2
+  exit 1
+}
+echo "  PASS schedule-curator.sh --uninstall message"
 
 # --- Regression: defensive target_repo normalization (issue #63) ---------
 # A filer may set `canonical:` to a file URL (https://github.com/<o>/<r>/

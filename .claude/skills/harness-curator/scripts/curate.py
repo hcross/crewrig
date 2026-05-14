@@ -64,6 +64,7 @@ _REAL_STDOUT = os.fdopen(os.dup(1), "w", encoding="utf-8", closefd=False)
 
 WING = os.environ.get("FRICTION_WING", "harness-friction")
 THRESHOLD = int(os.environ.get("THRESHOLD", "2"))
+MAX_ISSUES = int(os.environ.get("MAX_ISSUES", "0"))
 TARGET_OVERRIDE = os.environ.get("TARGET_REPO_OVERRIDE", "").strip()
 STDIN_FILE = os.environ.get("FROM_STDIN_FILE", "").strip()
 DEEP_MODE = os.environ.get("DEEP_MODE", "false").lower() == "true"
@@ -569,6 +570,7 @@ def main() -> int:
         "clusters_formed": 0,
         "clusters_above_threshold": 0,
         "clusters_parked": 0,
+        "clusters_truncated": 0,
         "routing_failures": 0,
     }
 
@@ -611,6 +613,33 @@ def main() -> int:
             "labels": cluster_labels(items),
             "frictions": items,
         })
+
+    # Deterministic ranking before truncation: severity descending (high → low),
+    # cluster_size descending, cluster_key ascending (tie-breaker for stability).
+    # Severity rank is pulled from the `severity:<x>` label already computed by
+    # cluster_labels(), keeping the labels block as the single source of truth.
+    def _severity_from_labels(labels: List[str]) -> str:
+        for lbl in labels:
+            if lbl.startswith("severity:"):
+                return lbl.split(":", 1)[1]
+        return "med"
+
+    output_clusters.sort(
+        key=lambda c: (
+            -SEVERITY_RANK.get(_severity_from_labels(c.get("labels", [])), 1),
+            -c["cluster_size"],
+            c["cluster_key"],
+        )
+    )
+
+    # --max-issues truncation: 0 = unlimited (existing behaviour). When the
+    # cap fires, the surplus clusters drop off the end of the ranked list and
+    # are surfaced in stats.clusters_truncated for the run summary. The field
+    # is always present (0 when no truncation) so consumers can read it
+    # unconditionally.
+    if MAX_ISSUES > 0 and len(output_clusters) > MAX_ISSUES:
+        stats["clusters_truncated"] = len(output_clusters) - MAX_ISSUES
+        output_clusters = output_clusters[:MAX_ISSUES]
 
     json.dump(
         {"stats": stats, "clusters": output_clusters},

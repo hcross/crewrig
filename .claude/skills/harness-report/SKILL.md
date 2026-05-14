@@ -9,7 +9,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.1.0"
+    version: "1.2.0"
 ---
 
 
@@ -112,6 +112,9 @@ Strongly encouraged:
   `evidence:` instead.
 - `severity` — `low` / `med` / `high`. Default `med`. Reserve `high`
   for blockers; it bypasses the cluster threshold and forces an MR.
+  See *Reactive trigger for `severity: high`* below — high-severity
+  reports SHOULD be surfaced immediately, not deferred to the weekly
+  sweep.
 - `suggestion` — what you think would fix it. The Curator weighs
   clusters with suggestions higher.
 
@@ -147,6 +150,21 @@ suggestion: <optional fix idea>
 
 Return to the task that was interrupted by the signal. The friction
 is now in the wing; the Curator will pick it up on its next run.
+
+### Reactive trigger for `severity: high`
+
+When you file a `FRICTION:` payload with `severity: high`, you SHOULD
+surface it immediately rather than wait for the next scheduled curator
+sweep. After the `mempalace_add_drawer` call returns, run:
+
+```bash
+bash community-config/skills/harness-curator/scripts/curate.sh --apply --dedup --max-issues 5
+```
+
+Dedup is on, so re-running is safe — already-open clusters are skipped.
+The curator's high-severity bypass (`cluster_qualifies` in `curate.py`)
+promotes the singleton even before a second report arrives. Skip this
+step for `low` / `med`: those wait for the weekly sweep.
 
 ## Output expectations
 
