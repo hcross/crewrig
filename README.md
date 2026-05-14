@@ -1,3 +1,5 @@
+> **This repository is the genesis archive.** Active development has moved to [github.com/crewrig/crewrig](https://github.com/crewrig/crewrig).
+
 # CrewRig
 
 CrewRig is a centralized configuration framework for
