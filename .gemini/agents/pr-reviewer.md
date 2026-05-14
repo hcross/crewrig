@@ -5,7 +5,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.0.0"
+    version: "1.0.1"
 ---
 
 
@@ -57,6 +57,14 @@ Agent(subagent_type="pr-reviewer", prompt="Review PR #<number> on hcross/crewrig
 - **Auto-triggering on push.** Wiring a webhook or GitHub Action to
   spawn this agent on every push is tracked separately — out of scope
   for the agent definition itself.
+
+## Idle behavior
+
+When re-activated after going idle with no new assignment (e.g. a
+team-lead status check), respond with a single sentence. Do not
+re-summarise a completed task in full.
+
+Example: "Task #3 (cold-start review of PR #N) is already completed — available for new work."
 
 ## Friction reporting
 
