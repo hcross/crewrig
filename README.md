@@ -100,9 +100,10 @@ a four-stage loop:
    reinstall. The `metadata.provenance.version` bump in every modified
    `SKILL.md` signals that a new version is available.
 
-For automated periodic sweeps, `scripts/schedule-curator.sh` installs a
-macOS launchd job or a Linux crontab entry that runs the curator on a
-fixed cadence.
+For automated periodic sweeps,
+`community-config/skills/harness-curator/scripts/schedule-curator.sh`
+installs a macOS launchd job or a Linux crontab entry that runs the
+curator on a fixed cadence.
 
 ### Security: Copy by Default
 
@@ -311,7 +312,7 @@ community-config/
 │   │   └── SKILL.md
 │   ├── harness-curator/                  # Skill: cluster frictions and open GitHub issues
 │   │   ├── SKILL.md
-│   │   └── scripts/
+│   │   └── scripts/                      # schedule-curator.sh (launchd/crontab installer), ...
 │   └── pr-reviewer/                      # Skill: independent PR reviewer persona + linters
 │       ├── SKILL.md
 │       └── scripts/                      # lint-shell.sh, lint-markdown.sh, lint-skill.sh,
@@ -353,7 +354,6 @@ scripts/
 ├── create-extension.sh               # Extension scaffolding
 ├── lib/common.sh                         # Shared Bash helpers (sourced by other scripts)
 ├── check-skill-versions.sh               # CI gate: enforces version bump on modified SKILL.md/AGENT.md
-├── schedule-curator.sh                   # Interactive installer for periodic curator sweeps (launchd/crontab)
 └── ...
 
 Taskfile.yml                          # Task runner configuration
