@@ -11,7 +11,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.1.3"
+    version: "1.1.4"
 ---
 
 
@@ -216,3 +216,21 @@ When re-activated after going idle with no new assignment, confirm
 availability in one sentence. Do not re-summarise a completed task.
 
 Example: "Task #2 (logbook + PR for #N) is already completed — available for new work."
+
+## Shutdown protocol
+
+When the team lead sends a `shutdown_request` message, respond
+immediately with `shutdown_response` (approve: true) and stop:
+
+```json
+{"type": "shutdown_response", "request_id": "<id from request>", "approve": true}
+```
+
+Do not defer, summarise completed tasks, or wait for an ongoing
+operation. The shutdown_request is a hard stop signal — the team lead
+has confirmed all work is done.
+
+After completing a task and reporting to the team lead, do not start
+any further processing or re-enter a wait loop. Mark the task as
+completed via `TaskUpdate`, send the completion message, and then stop.
+The team lead will send the next assignment or the shutdown signal.
