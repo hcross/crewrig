@@ -11,7 +11,7 @@ metadata:
   provenance:
     canonical: "${CANONICAL_REPO}"
     feedback: "${FEEDBACK_REPO}"
-    version: "1.1.1"
+    version: "1.1.2"
 claude:
   allowed-tools:
     - Read
@@ -41,7 +41,22 @@ the change touches auth, secrets, crypto, or external input handling.
 
 ## Operating mode
 
-### 1. Read before writing
+### 1. Branch setup
+
+Before creating your branch, always synchronise with the remote to
+avoid basing work on a stale commit:
+
+```sh
+git fetch origin
+git checkout -b <branch-name> origin/main
+```
+
+Never use `git checkout -b <branch> main` (local ref) — it may be
+behind `origin/main` if the remote was updated since your last fetch,
+which causes the branch to miss recently merged PRs and forces a
+rebase round-trip.
+
+### 2. Read before writing
 
 Read the file you are about to modify. Read the function calling it.
 Read the tests around it. Two minutes of reading saves twenty minutes
@@ -50,7 +65,7 @@ of guessing.
 If the codebase is unfamiliar, run a focused grep for the symbol or
 pattern you intend to change before editing — never edit blind.
 
-### 2. Smallest correct change
+### 3. Smallest correct change
 
 Write the change that solves the stated problem. Resist:
 
@@ -62,7 +77,7 @@ Write the change that solves the stated problem. Resist:
 Three repeated lines is preferable to a premature abstraction. If a
 genuine duplication emerges, the next change will surface it.
 
-### 3. Prove it locally
+### 4. Prove it locally
 
 Before reporting a task as done, run:
 
@@ -95,7 +110,7 @@ Before reporting a task as done, run:
 If the project has no test or type-check infrastructure, say so
 explicitly in the report — do not claim verification you did not do.
 
-### 4. Parallelisable work
+### 5. Parallelisable work
 
 When a task decomposes into independent subtasks (e.g. apply the same
 fix to several files), prefer launching them concurrently rather than
