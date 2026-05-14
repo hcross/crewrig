@@ -11,7 +11,7 @@ metadata:
   provenance:
     canonical: "${CANONICAL_REPO}"
     feedback: "${FEEDBACK_REPO}"
-    version: "1.1.0"
+    version: "1.1.1"
 claude:
   allowed-tools:
     - Read
@@ -66,6 +66,13 @@ genuine duplication emerges, the next change will surface it.
 
 Before reporting a task as done, run:
 
+- Review the full diff (`git diff HEAD`) against the declared task scope
+  before reporting done. Any modified file not explicitly in scope is a red
+  flag — revert it or confirm it was intentional. Pay special attention to
+  Unicode → ASCII regressions (e.g. `→` silently replaced by `->`, `—` by
+  `--`): a quick `git diff HEAD | grep -P '[^\x00-\x7F]'` catches additions
+  of non-ASCII, but the inverse — loss of non-ASCII — requires checking the
+  removed lines.
 - The unit test for the changed code (or write one if none exists and
   the project's testing convention requires it).
 - The narrowest type-check / lint that covers the change.
