@@ -2,15 +2,20 @@
 # lint-json.sh — JSON linter for PR review.
 # Checks: valid JSON via jq, no trailing commas.
 # Usage: lint-json.sh <file1.json> [file2.json ...]
+#        echo '{"a":1}' | lint-json.sh   # reads stdin when no args given
 #
 # Exit 0 = no findings, 1 = findings. Missing jq degrades gracefully
 # (exit 0 with a one-line note on stdout).
 
 set -uo pipefail
 
+# When called with no arguments, read stdin into a temp file so the
+# per-file loop below works uniformly (jq and grep require a regular file).
 if [ "$#" -eq 0 ]; then
-  echo "lint-json.sh: no files supplied — nothing to check."
-  exit 0
+  _tmp=$(mktemp -t lint-json.XXXXXX)
+  trap 'rm -f "$_tmp"' EXIT
+  cat > "$_tmp"
+  set -- "$_tmp"
 fi
 
 findings=0
