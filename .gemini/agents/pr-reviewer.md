@@ -38,13 +38,13 @@ On activation:
 
 Invoke from the team lead or directly:
 
-```
+```text
 /review <PR_NUMBER>
 ```
 
 Or as a TeamCreate teammate (runs in parallel with other agents):
 
-```
+```python
 Agent(subagent_type="pr-reviewer", prompt="Review PR #<number> on hcross/crewrig. Cold start — do not use any context from this conversation.")
 ```
 
