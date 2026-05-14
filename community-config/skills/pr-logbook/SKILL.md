@@ -11,7 +11,7 @@ metadata:
   provenance:
     canonical: "${CANONICAL_REPO}"
     feedback: "${FEEDBACK_REPO}"
-    version: "1.1.1"
+    version: "1.1.2"
 claude:
   allowed-tools:
     - Read
@@ -196,3 +196,10 @@ When a recognition signal fires (see `config/TOOLS.md` →
 `harness-report` skill rather than reimplementing the protocol
 inline. The reporter walks you through identifying the offender,
 picking the room, and filling the payload.
+
+## Idle behavior
+
+When re-activated after going idle with no new assignment, confirm
+availability in one sentence. Do not re-summarise a completed task.
+
+Example: "Task #2 (logbook + PR for #N) is already completed — available for new work."
