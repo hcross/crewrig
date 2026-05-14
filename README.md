@@ -1,11 +1,24 @@
 # CrewRig
 
-Centralized configuration framework for
+CrewRig is a centralized configuration framework for
 [Gemini CLI](https://github.com/google-gemini/gemini-cli) and
-[Claude Code](https://claude.ai/code).
-It provides a shared, layered context system that shapes how AI assistants
-behave depending on the user's organization, team, role, seniority, and
-personal preferences.
+[Claude Code](https://claude.ai/code). It serves three complementary
+purposes:
+
+- **Personal context layer** — layered configuration files shape how AI
+  assistants behave for a specific user's role, team, and seniority.
+- **Shared innovation zone** — `community-config/` is a collaborative
+  sandbox where a team builds and shares skills, agents, and commands
+  that any member can install from a single source.
+- **Harness engineering** — a built-in feedback loop lets agents tag
+  frictions encountered during real work; the harness curator clusters
+  those frictions into actionable GitHub issues, closing the loop
+  between AI behavior and continuous improvement.
+
+CrewRig develops itself using its own mechanics. The internal agent crew
+— architect, developer, tester, pr-logbook, and pr-reviewer — runs on
+the same skills and agents that ship with the framework. The development
+workflow is the product in action.
 
 ## Supported Platforms
 
@@ -39,6 +52,58 @@ to form the agent's full context:
 enforced priority order. **Claude Code** loads them from `~/.claude/rules/`
 as additive context (all files combine, no override).
 
+### Community Config Zone
+
+`community-config/` is a single-source sandbox where skills, agents, and
+commands are written **once** and compiled into outputs for both CLIs.
+Contributors edit a single Markdown file with YAML frontmatter; the
+build step produces Gemini and Claude Code targets.
+
+| Type | Description |
+|---|---|
+| Skill | Reusable agent behaviour activated via `/skill-name` |
+| Command | Slash command with a prompt body |
+| Agent | Sub-agent with a dedicated persona |
+| Hook | Lifecycle hook (BeforeTool/AfterTool/etc.) |
+| Policy | Security or behavioural constraint |
+| MCP Server | External tool integration |
+| Theme | UI theme fragment |
+
+Install a component on a project:
+
+```bash
+# Gemini CLI
+task install-component TYPE=skills NAME=ci-workflow-engineering
+
+# Claude Code
+task install-claude-component TYPE=claude-skills NAME=ci-workflow-engineering
+```
+
+See [`community-config/FORMAT.md`](community-config/FORMAT.md) for the
+full unified-source specification.
+
+### Harness Engineering Loop
+
+The harness turns real-world frictions into shipped improvements through
+a four-stage loop:
+
+1. **Tag** — during real work, agents invoke the `harness-report` skill
+   the moment a friction signal fires (user pushback, tool surprise,
+   process gap). Each tag lands in the MemPalace `harness-friction`
+   wing.
+2. **Cluster** — `task harness-curate -- --apply` clusters the tagged
+   frictions by subcategory and opens one descriptive GitHub issue per
+   cluster.
+3. **Fix** — issues are addressed via the normal branch/PR workflow;
+   the internal agent crew handles the implementation cycle.
+4. **Re-install** — after a fix ships, run `task build-components` and
+   reinstall. The `metadata.provenance.version` bump in every modified
+   `SKILL.md` signals that a new version is available.
+
+For automated periodic sweeps, `scripts/schedule-curator.sh` installs a
+macOS launchd job or a Linux crontab entry that runs the curator on a
+fixed cadence.
+
 ### Security: Copy by Default
 
 Context files are **copied** (not symlinked) to the target directory by
@@ -56,6 +121,38 @@ The framework implements a three-tier memory model:
 | 3 | Obsidian | User knowledge (Second Brain) | Read free, write user-controlled |
 
 See `config/TOOLS.md` for the full memory protocol.
+
+## Lifecycle Scenario
+
+A complete journey, from installing the framework to closing the
+harness loop:
+
+1. **Install** — fork crewrig, then run
+   `task setup-claude-interactive` (or `task setup-gemini-interactive`).
+   Generate your profile with `/init-personal-profile` and your soul
+   with `/init-soul`.
+2. **Create** — add a `SKILL.md` to
+   `community-config/skills/my-skill/`, or run
+   `task create-extension NAME=my-skill`. Run `task build-components`
+   to generate outputs for both CLIs.
+3. **Use on another project** — install the component:
+   `task install-claude-component TYPE=claude-skills NAME=my-skill`.
+   The skill is now available in Claude Code on that project.
+4. **Record frictions** — as agents use the skill, they invoke the
+   `harness-report` skill the moment a recognition signal fires. Each
+   friction tag lands in the MemPalace `harness-friction` wing.
+5. **Transform frictions into tickets** — run
+   `task harness-curate -- --apply`. The curator clusters the
+   frictions and opens one GitHub issue per cluster against the
+   target repo.
+6. **Implement** — address the issues via feature branches. The
+   internal agent crew (architect → developer → tester → pr-logbook →
+   pr-reviewer) handles the cycle.
+7. **Install the new version** — run `task build-components` and
+   reinstall; `metadata.provenance.version` bumps confirm which
+   components changed.
+8. **Back to step 3** — use the improved skill on your projects; the
+   harness loop continues.
 
 ## Prerequisites
 
@@ -209,10 +306,21 @@ config/
 community-config/
 ├── FORMAT.md              # Unified source format specification
 ├── skills/                # Reusable agent skills (single-source)
-│   └── ci-workflow-engineering/
+│   ├── ci-workflow-engineering/
+│   ├── harness-report/                   # Skill: tag frictions during real work
+│   │   └── SKILL.md
+│   ├── harness-curator/                  # Skill: cluster frictions and open GitHub issues
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   └── pr-reviewer/                      # Skill: independent PR reviewer persona + linters
+│       ├── SKILL.md
+│       └── scripts/                      # lint-shell.sh, lint-markdown.sh, lint-skill.sh,
+│                                         # lint-python.sh, lint-json.sh
 ├── commands/              # Shared slash commands
 ├── hooks/                 # Lifecycle hooks
 ├── agents/                # Sub-agent definitions
+│   └── pr-reviewer/                      # Agent: cold-start independent PR reviewer
+│       └── AGENT.md
 ├── policies/              # Security policies
 ├── mcp-servers/           # MCP server configurations
 └── themes/                # UI themes
@@ -243,6 +351,9 @@ scripts/
 ├── install-workspace.sh              # Bulk Gemini install
 ├── install-extension.sh              # Gemini extension installer
 ├── create-extension.sh               # Extension scaffolding
+├── lib/common.sh                         # Shared Bash helpers (sourced by other scripts)
+├── check-skill-versions.sh               # CI gate: enforces version bump on modified SKILL.md/AGENT.md
+├── schedule-curator.sh                   # Interactive installer for periodic curator sweeps (launchd/crontab)
 └── ...
 
 Taskfile.yml                          # Task runner configuration

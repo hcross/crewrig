@@ -139,6 +139,46 @@ Each extension is an independent npm package with its own versioning. See
 > **Warning:** never install the `extension-skeleton/` directory itself.
 > It is a template container, not a functional extension.
 
+## Harness Engineering Contribution Path
+
+Frictions are a first-class contribution mechanism. Any agent or
+developer who encounters a problem with a skill, agent, or process can
+tag it immediately:
+
+1. During real work, invoke the `harness-report` skill (or
+   `/harness-report`) the moment a recognition signal fires.
+2. Frictions accumulate in the MemPalace `harness-friction` wing — no
+   manual ticket required at tag time.
+3. Run `task harness-curate -- --apply` to cluster frictions and open
+   GitHub issues automatically.
+4. Address the issues via the standard PR workflow like any other
+   change.
+
+This path ensures that systemic improvements surface without requiring
+the person who hits the friction to also write the fix. Tag it; the
+loop handles the rest.
+
+## Internal Agent Crew
+
+CrewRig is developed using its own agent crew. Each PR goes through a
+chain of specialized agents:
+
+| Agent | Role |
+|---|---|
+| `architect` | Design reviews, ADRs, blast-radius analysis before implementation |
+| `developer` | Implements the smallest correct change |
+| `tester` | Authors high-signal regression tests |
+| `pr-logbook` | Drafts the PR title, body, and logbook issue |
+| `pr-reviewer` | Cold-start independent review before merge |
+
+The crew runs on the skills and agents shipped with crewrig itself. To
+invoke the full chain on an issue:
+
+```python
+Agent(subagent_type="architect", prompt="Design the implementation for issue #N in hcross/crewrig. Read the issue first.")
+# then developer, tester, pr-logbook, pr-reviewer in sequence
+```
+
 ## Standards
 
 1. **Language**: all technical artifacts (code, commits, PRs) in **English**.
