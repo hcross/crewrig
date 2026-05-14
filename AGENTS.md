@@ -76,6 +76,9 @@ This strategy ensures that all experience (failures and successes) from agents w
 
 Logbook issues must be written in English and use the label `logbook`.
 
+Once the PR is merged and any linked feature issue is closed, the logbook
+issue must also be closed (`state_reason: completed`).
+
 ## GitHub Access
 
 All GitHub operations (PRs, issues, branch protection) are performed through the dedicated MCP server.
