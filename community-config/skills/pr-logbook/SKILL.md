@@ -11,7 +11,7 @@ metadata:
   provenance:
     canonical: "${CANONICAL_REPO}"
     feedback: "${FEEDBACK_REPO}"
-    version: "1.1.2"
+    version: "1.1.3"
 claude:
   allowed-tools:
     - Read
@@ -136,6 +136,23 @@ Text-only tooling silently drops file metadata. Verify before pushing:
   the round-trip: `git ls-files --stage -- '*.sh'` must show `100755`,
   not `100644`. The MCP `push_files` tool strips the exec bit. Restore
   with `git update-index --chmod=+x <file>` and amend before pushing.
+
+### 7. Post-merge cleanup
+
+After the squash-merge commit lands on the target branch:
+
+1. Close the logbook issue:
+   `gh issue close <logbook-issue-number> --reason completed`
+   or via the GitHub MCP `issue_write` tool with `state: "closed"` and
+   `state_reason: "completed"`.
+2. If the PR also closes a feature issue (detected via `Closes #N` /
+   `Fixes #N` / `Resolves #N` in §4), confirm that issue is closed too
+   — GitHub auto-closes on merge when the keyword is in the PR body,
+   but verify rather than assume.
+
+Skip step 1 if the logbook entry was appended to an existing feature
+issue (the §4 upstream-check path) — closing the feature issue is
+sufficient.
 
 ## Cross-cutting: skill / agent source version bumps
 
