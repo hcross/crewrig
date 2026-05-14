@@ -1,6 +1,6 @@
 ---
 name: harness-curator
-description: "Harness feedback-loop curator. Activate on demand to read friction tags from the global harness-friction wing, cluster them, and open one descriptive issue per cluster on the canonical/feedback repos declared in components' provenance blocks. The fix MR lands later (human-authored or via the auto-fix mode tracked in #42). Also supports a `--deep` mode that sweeps `wing=transcripts` with heuristic pre-filtering and emits a Markdown review document for triage."
+description: "Harness feedback-loop curator. Activate on demand to read friction tags from the global harness-friction wing, cluster them, and open one descriptive issue per cluster on the canonical/feedback repos declared in components' provenance blocks. The fix MR lands later (human-authored or via the auto-fix mode tracked in #42). Also supports a `--deep` mode that sweeps `wing=transcripts` with heuristic pre-filtering and emits a Markdown review document for triage. Auto mode (#42) supports scheduled runs via scripts/schedule-curator.sh with dedup and per-run issue cap."
 license: Apache-2.0
 compatibility: "Requires bash, jq, the gh CLI (used by setup-labels.sh and --apply), and the mempalace Python package (pipx install 'mempalace>=3.3.3,<3.4')."
 allowed-tools:
@@ -13,7 +13,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.3.0"
+    version: "1.4.0"
 ---
 
 
@@ -126,6 +126,8 @@ via flags when the situation warrants:
 | Target repo | most-frequent `canonical:` in cluster | `--target-repo <url>` for tests |
 | Cluster key | `subcategory:` if set, else `room` | (no override — wire-protocol) |
 | Labels | `harness-feedback` + `room:<dominant>` + `severity:<worst>` | (no override — wire-protocol) |
+| Max issues per run | 0 (unlimited) | `--max-issues N` (ranks high-severity → biggest cluster first, then truncates) |
+| Dedup existing issues | off | `--dedup` (skips clusters whose `cluster_key` already has an open `harness-feedback` issue) |
 
 A cluster with no resolvable `canonical:` and no `--target-repo`
 override counts as a *routing failure* — surfaced in the stats, not
@@ -186,7 +188,41 @@ Behavior:
   for it, which lands a `FRICTION:` payload in `wing="harness-friction"`
   for the next regular sweep.
 
-Auto mode is tracked in issue #42.
+Auto mode is implemented; see *Auto mode (scheduled curation)* below.
+
+### Auto mode (scheduled curation)
+
+Auto mode runs `curate.sh --apply --dedup --max-issues 5` on a recurring
+local schedule, default weekly Monday 09:00. Dedup is on so re-running
+the curator never re-opens the same cluster; `--max-issues 5` caps a
+single sweep so a noisy week cannot flood a repo. Ranking before
+truncation is severity-first (`high` > `med` > `low`), then cluster
+size (descending), then `cluster_key` (ascending, tie-breaker).
+
+Install the schedule on your maintainer machine:
+
+```bash
+bash community-config/skills/harness-curator/scripts/schedule-curator.sh
+# Preview only:
+bash community-config/skills/harness-curator/scripts/schedule-curator.sh --dry-run
+# Remove the managed entry:
+bash community-config/skills/harness-curator/scripts/schedule-curator.sh --uninstall
+```
+
+The installer detects macOS (launchd, plist at
+`~/Library/LaunchAgents/io.crewrig.harness-curator.plist`) vs Linux
+(cron, marker-comment-wrapped entry in `crontab -l`). Re-running the
+install replaces the previous entry, never duplicates.
+
+Reactive trigger — run manually the moment you file a `severity: high`
+friction so the curator surfaces it without waiting for the next sweep:
+
+```bash
+bash community-config/skills/harness-curator/scripts/curate.sh --apply --dedup --max-issues 5
+```
+
+Auto mode never runs on CI by design — MemPalace state is local to the
+maintainer.
 
 ### 5. Run summary
 

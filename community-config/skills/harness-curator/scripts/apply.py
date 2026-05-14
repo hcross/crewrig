@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 import sys
+from typing import Optional
 
 
 def _build_cmd(cluster: dict) -> list[str]:
@@ -51,6 +52,62 @@ def _build_cmd(cluster: dict) -> list[str]:
     return cmd
 
 
+def _repo_slug(cluster: dict) -> str:
+    """Return the `<owner>/<repo>` slug for a cluster's target_repo, applying
+    the same /blob/ and /tree/ stripping as `_build_cmd` so the dedup query
+    matches the issue-create target exactly."""
+    target = cluster["target_repo"]
+    for sep in ("/blob/", "/tree/"):
+        if sep in target:
+            target = target.split(sep, 1)[0]
+            break
+    return target.replace("https://github.com/", "")
+
+
+def _existing_issue_url(repo: str, cluster_key: str) -> Optional[str]:
+    """Look up an open `harness-feedback` issue whose title matches the
+    cluster's canonical prefix `Friction cluster: <key> (`. Returns the
+    issue URL on match, None otherwise.
+
+    `gh search` / `gh issue list --search` is fuzzy, so we post-filter on
+    a startswith check. The trailing ` (` anchor is load-bearing — it
+    prevents substring collisions between sibling cluster keys (e.g.
+    `yq` vs `yq-merge`).
+
+    Race condition: two concurrent curator runs could both miss the
+    duplicate and both open an issue. V1 ignores this — the scheduler
+    runs serially on one machine and the reactive trigger is rare.
+    Fails open on `gh` errors: when in doubt, surface the friction.
+    """
+    prefix = f"Friction cluster: {cluster_key} ("
+    cmd = [
+        "gh", "issue", "list",
+        "--repo", repo,
+        "--label", "harness-feedback",
+        "--state", "open",
+        "--search", f"Friction cluster: {cluster_key} in:title",
+        "--json", "title,url",
+        "--limit", "50",
+    ]
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        items = json.loads(result.stdout or "[]")
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+        # Fail open: log and let the cluster open. Duplicates are
+        # recoverable; a missed friction is not.
+        print(
+            f"  warn: dedup query failed on {repo} for '{cluster_key}': {e}; "
+            "treating as no-match.",
+            file=sys.stderr,
+        )
+        return None
+    for item in items:
+        title = item.get("title", "")
+        if title.startswith(prefix):
+            return item.get("url")
+    return None
+
+
 def _collect_drawer_ids(cluster: dict) -> tuple[list[str], int]:
     """Return (present_ids, missing_count). Caller emits a stderr warning
     when missing > 0 so frictions without `_drawer_id` are surfaced rather
@@ -73,6 +130,15 @@ def main() -> int:
         action="store_true",
         help="Print the resolved gh argv per cluster as JSON lines and exit 0.",
     )
+    parser.add_argument(
+        "--dedup",
+        action="store_true",
+        help=(
+            "Skip clusters with an existing open harness-feedback issue on "
+            "the target repo (matched on the canonical title prefix). "
+            "Combine with --dry-run-apply to inspect what would be skipped."
+        ),
+    )
     args = parser.parse_args()
 
     data = json.load(sys.stdin)
@@ -83,6 +149,13 @@ def main() -> int:
 
     if args.dry_run_apply:
         for c in clusters:
+            # Dedup probe runs even in dry-run-apply so tests can assert
+            # the resolved behaviour without a live `gh issue create`.
+            # When --dedup is off, the dedup_match line carries null so
+            # the wire shape stays uniform across modes.
+            dedup_match: Optional[str] = None
+            if args.dedup:
+                dedup_match = _existing_issue_url(_repo_slug(c), c["cluster_key"])
             print(json.dumps(_build_cmd(c)))
             # Issue #69: surface the drawers that would receive the
             # `opened_as` correlation stamp. Object shape (not array) so
@@ -98,6 +171,10 @@ def main() -> int:
                 "would_update_drawers": drawer_ids,
                 "cluster_key": c["cluster_key"],
             }))
+            print(json.dumps({
+                "dedup_match": dedup_match,
+                "cluster_key": c["cluster_key"],
+            }))
         return 0
 
     # Real --apply path. Capture a duped fd 1 BEFORE importing
@@ -111,10 +188,24 @@ def main() -> int:
 
     opened = []
     failures = []
+    skipped_duplicates: list[dict] = []
     writeback_failures = 0
     for c in clusters:
         target = c["target_repo"]
         title = c["title"]
+        if args.dedup:
+            existing = _existing_issue_url(_repo_slug(c), c["cluster_key"])
+            if existing:
+                print(
+                    f"--- Skipping duplicate cluster '{c['cluster_key']}' "
+                    f"(already open: {existing})",
+                    file=sys.stderr,
+                )
+                skipped_duplicates.append({
+                    "cluster": c["cluster_key"],
+                    "url": existing,
+                })
+                continue
         print(f"--- Opening issue on {target}: {title}", file=sys.stderr)
         cmd = _build_cmd(c)
         try:
@@ -154,6 +245,13 @@ def main() -> int:
     print(f"Opened: {len(opened)} issue(s)", file=_real_stdout)
     for o in opened:
         print(f"  - {o['cluster']}: {o['url']}", file=_real_stdout)
+    if skipped_duplicates:
+        print(
+            f"Skipped (dedup): {len(skipped_duplicates)} duplicate cluster(s)",
+            file=_real_stdout,
+        )
+        for s in skipped_duplicates:
+            print(f"  - {s['cluster']}: {s['url']}", file=_real_stdout)
     _real_stdout.flush()
     if writeback_failures:
         print(

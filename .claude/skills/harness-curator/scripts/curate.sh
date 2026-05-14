@@ -15,6 +15,8 @@
 #                          [--from-stdin]
 #                          [--target-repo <url>]
 #                          [--threshold <n>]
+#                          [--max-issues <n>]
+#                          [--dedup]
 #                          [--deep] [--deep-window <n>]
 #
 # Options:
@@ -26,6 +28,15 @@
 #                    provenance routing). For tests / single-fork curation.
 #   --threshold      Minimum cluster size to propose an issue (default: 2).
 #                    Severity-`high` frictions bypass this and always cluster.
+#   --max-issues     Cap the number of clusters emitted in a single run
+#                    (default: 0 = unlimited). When the cap fires, clusters
+#                    are ranked by severity (high → low), then by cluster
+#                    size (desc), then by cluster_key (asc, for stability).
+#                    Auto mode uses `--max-issues 5` to bound a sweep.
+#   --dedup          Skip clusters whose `cluster_key` already has an open
+#                    `harness-feedback` issue on the target repo (matched on
+#                    the canonical "Friction cluster: <key> (" title prefix).
+#                    Auto mode pairs this with --apply so re-runs are safe.
 #   --deep           Deep sweep mode: scan wing=transcripts with heuristic
 #                    pre-filtering and emit a Markdown review document
 #                    instead of clusters/issues. Incompatible with --apply.
@@ -48,6 +59,8 @@ DRY_RUN=true
 FROM_STDIN=false
 TARGET_REPO=""
 THRESHOLD=2
+MAX_ISSUES=0
+DEDUP_MODE=false
 DEEP_MODE=false
 DEEP_WINDOW=500
 
@@ -58,10 +71,12 @@ while [[ $# -gt 0 ]]; do
     --from-stdin)     FROM_STDIN=true; shift ;;
     --target-repo)    TARGET_REPO="$2"; shift 2 ;;
     --threshold)      THRESHOLD="$2"; shift 2 ;;
+    --max-issues)     MAX_ISSUES="$2"; shift 2 ;;
+    --dedup)          DEDUP_MODE=true; shift ;;
     --deep)           DEEP_MODE=true; shift ;;
     --deep-window)    DEEP_WINDOW="$2"; shift 2 ;;
     --help|-h)
-      sed -n '2,33p' "$0"
+      sed -n '2,44p' "$0"
       exit 0
       ;;
     *)
@@ -74,6 +89,11 @@ done
 
 if ! [[ "$THRESHOLD" =~ ^[0-9]+$ ]] || [ "$THRESHOLD" -lt 1 ]; then
   echo "Error: --threshold must be a positive integer" >&2
+  exit 1
+fi
+
+if ! [[ "$MAX_ISSUES" =~ ^[0-9]+$ ]]; then
+  echo "Error: --max-issues must be a non-negative integer (0 = unlimited)" >&2
   exit 1
 fi
 
@@ -128,6 +148,7 @@ fi
 CURATE_OUT=$(env \
   FRICTION_WING="harness-friction" \
   THRESHOLD="$THRESHOLD" \
+  MAX_ISSUES="$MAX_ISSUES" \
   TARGET_REPO_OVERRIDE="$TARGET_REPO" \
   FROM_STDIN_FILE="$STDIN_FILE" \
   DEEP_MODE="$DEEP_MODE" \
@@ -156,4 +177,8 @@ command -v gh >/dev/null 2>&1 || {
 # Parse JSON and open one issue per cluster. Invoke via $MEMPALACE_PYTHON
 # (not bare shebang) so that any future `from mempalace …` import in
 # apply.py resolves to the same interpreter as curate.py.
-echo "$CURATE_OUT" | "$MEMPALACE_PYTHON" "$(dirname "$0")/apply.py"
+if [ "$DEDUP_MODE" = true ]; then
+  echo "$CURATE_OUT" | "$MEMPALACE_PYTHON" "$(dirname "$0")/apply.py" --dedup
+else
+  echo "$CURATE_OUT" | "$MEMPALACE_PYTHON" "$(dirname "$0")/apply.py"
+fi
