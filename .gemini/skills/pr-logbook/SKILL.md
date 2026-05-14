@@ -7,7 +7,7 @@ metadata:
   provenance:
     canonical: "https://github.com/hcross/crewrig"
     feedback: "https://github.com/hcross/crewrig"
-    version: "1.1.0"
+    version: "1.1.1"
 ---
 
 
@@ -69,6 +69,19 @@ deletions, and the rationale for each.>
 ```
 
 ### 4. Logbook entries
+
+**Before creating a new logbook issue**, check whether the PR already closes
+an existing feature issue (scan the PR body for `Closes #N`, `Fixes #N`,
+`Resolves #N` patterns). If a feature issue exists:
+
+1. Append the logbook entry to that issue as a comment via the GitHub MCP
+   `add_issue_comment` tool (or `gh issue comment <N> --body "..."`).
+2. Ensure the issue carries the `logbook` label — add it with
+   `gh issue edit <N> --add-label logbook` if absent.
+3. Do **not** create a new logbook issue. The feature ticket is the logbook.
+
+A standalone logbook issue is only warranted when the PR has no upstream
+feature ticket (hotfix, dependency bump, automation run with no prior ticket).
 
 A logbook is *not* a status update. It is the record the next agent
 will read to avoid your mistakes. Optimise for that reader.
